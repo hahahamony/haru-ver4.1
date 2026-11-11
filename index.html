@@ -1,0 +1,2583 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="하루가계부">
+  <title>하루가계부 - 간편 모바일 가계부</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex justify-center">
+
+  <!-- Mobile Screen Container -->
+  <div id="appContainer" class="w-full max-w-md bg-white min-h-screen flex flex-col shadow-2xl relative pb-24">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100 px-3.5 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-1.5">
+        <button id="headerBackBtn" class="hidden p-1.5 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition active:scale-95" title="뒤로가기" aria-label="뒤로가기">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <div class="flex items-center space-x-1.5">
+          <span class="text-xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">하루가계부</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-semibold border border-blue-100">결제분석</span>
+        </div>
+      </div>
+      <!-- Right Controls: Month Selector -->
+      <div class="flex items-center space-x-1.5">
+        <!-- Month Selector -->
+        <div class="flex items-center space-x-1 bg-slate-100 rounded-lg p-1 text-sm font-semibold text-slate-700">
+          <button id="prevMonthBtn" class="p-1 hover:bg-white rounded transition text-slate-500 hover:text-slate-900" title="이전 달">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <span id="currentMonthLabel" class="px-2 min-w-[70px] text-center text-xs sm:text-sm font-bold">2026.11</span>
+          <button id="nextMonthBtn" class="p-1 hover:bg-white rounded transition text-slate-500 hover:text-slate-900" title="다음 달">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-4 overflow-y-auto">
+
+      <!-- VIEW 1: HOME (Dashboard) -->
+      <section id="viewHome" class="space-y-4">
+        <!-- Budget Card -->
+        <div class="bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-700 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden">
+          <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+          
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <p class="text-xs text-blue-100 font-medium">이번 달 남은 예산</p>
+              <h2 id="homeRemainingBudget" class="text-2xl font-bold tracking-tight mt-0.5">0원</h2>
+            </div>
+            <button id="openBudgetModalBtn" class="text-xs bg-white/20 hover:bg-white/30 backdrop-blur px-2.5 py-1 rounded-lg transition font-medium text-white flex items-center space-x-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              <span>예산설정</span>
+            </button>
+          </div>
+
+          <!-- Progress Bars (예산 대비 지출 + 수입 대비 지출 비교 그래프) -->
+          <div class="space-y-3 mb-4 bg-black/15 p-3 rounded-xl border border-white/10">
+            <!-- 1. 목표 예산 대비 지출 게이지 -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-[11px] text-blue-100 font-medium">
+                <span class="flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-pink-300"></span>
+                  <span>목표 예산 대비</span>
+                  <b id="homeBudgetSpentPercent" class="text-pink-200 ml-0.5">0% 소진</b>
+                </span>
+                <span>목표 <span id="homeTargetBudgetLabel">0원</span></span>
+              </div>
+              <div class="w-full bg-black/30 rounded-full h-2 overflow-hidden">
+                <div id="homeBudgetProgressBar" class="bg-gradient-to-r from-pink-300 to-pink-400 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- 2. 총 수입 대비 지출 소진율 게이지 그래프 -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-[11px] text-blue-100 font-medium">
+                <span class="flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span>총 수입 대비</span>
+                  <b id="homeIncomeSpentPercent" class="text-emerald-300 ml-0.5">0% 사용</b>
+                </span>
+                <span>수입 <span id="homeIncomeGraphTargetLabel">0원</span></span>
+              </div>
+              <div class="w-full bg-black/30 rounded-full h-2 overflow-hidden">
+                <div id="homeIncomeProgressBar" class="bg-gradient-to-r from-emerald-400 to-teal-400 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Income & Expense Mini Grid -->
+          <div class="grid grid-cols-2 gap-2 pt-3 border-t border-white/15">
+            <div>
+              <p class="text-[11px] text-blue-200 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>총 수입
+              </p>
+              <p id="homeTotalIncome" class="text-sm font-bold mt-0.5 text-emerald-300">+0원</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-blue-200 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-rose-400"></span>총 지출
+              </p>
+              <p id="homeTotalExpense" class="text-sm font-bold mt-0.5 text-rose-200">-0원</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 예상 카드값 (신용카드 + 하이브리드카드) 요약 카드 -->
+        <div id="homeCardBillCard" class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-4 text-white shadow-md relative overflow-hidden border border-indigo-900/50 transition-all">
+          <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-indigo-500/10 rounded-full blur-lg pointer-events-none"></div>
+          
+          <!-- 카드 헤더: 타이틀 및 활성화/비활성화 토글 스위치 -->
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-1.5">
+              <span class="text-sm">💳</span>
+              <h3 class="text-xs font-bold text-indigo-200 tracking-wide">이번 달 예상 카드 대금</h3>
+              <span id="cardBillActiveBadge" class="text-[9px] px-1.5 py-0.2 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 font-medium">청구예상</span>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+              <span id="cardBillToggleText" class="text-[10px] text-indigo-300 font-medium">활성</span>
+              <button id="cardBillToggleBtn" type="button" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-blue-600 transition-colors duration-200 ease-in-out focus:outline-none" role="switch" aria-checked="true" aria-label="예상 카드 대금 토글">
+                <span id="cardBillToggleKnob" class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-4"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 활성화(ON) 상태 시 노출되는 상세 내용 -->
+          <div id="cardBillActiveContent" class="space-y-2.5">
+            <div class="flex items-baseline justify-between">
+              <h2 id="homeTotalExpectedCardBill" class="text-2xl font-black tracking-tight text-white">0원</h2>
+              <div class="flex items-center space-x-1.5">
+                <span id="homeCardBillCount" class="text-[11px] text-indigo-300">총 0건</span>
+                <button id="homeFilterCardBillBtn" class="text-[10px] text-indigo-300 hover:text-white bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-lg transition" title="카드 청구 내역 모아보기">
+                  내역 확인 &rarr;
+                </button>
+              </div>
+            </div>
+
+            <!-- Breakdown: 신용카드 + 하이브리드카드 (클릭 시 내역 정렬 이동) -->
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-white/10 text-xs">
+              <!-- 신용카드 클릭 아이템 -->
+              <div data-home-payment="신용카드" class="home-pay-card-item bg-white/5 hover:bg-white/15 active:scale-[0.98] cursor-pointer rounded-xl p-2.5 border border-white/10 hover:border-blue-400/50 transition-all group" title="신용카드 내역 모아보기">
+                <div class="flex items-center justify-between text-[11px] text-indigo-200">
+                  <span class="flex items-center gap-1 font-semibold group-hover:text-white transition">💳 신용카드</span>
+                  <span id="homeCreditCardCount" class="text-[10px] text-slate-400 group-hover:text-indigo-200 transition">0건 &gt;</span>
+                </div>
+                <p id="homeCreditCardBill" class="font-bold text-white mt-1 text-xs sm:text-sm">0원</p>
+              </div>
+              <!-- 하이브리드카드 클릭 아이템 -->
+              <div data-home-payment="하이브리드카드" class="home-pay-card-item bg-white/5 hover:bg-white/15 active:scale-[0.98] cursor-pointer rounded-xl p-2.5 border border-white/10 hover:border-cyan-400/50 transition-all group" title="하이브리드카드 내역 모아보기">
+                <div class="flex items-center justify-between text-[11px] text-cyan-200">
+                  <span class="flex items-center gap-1 font-semibold group-hover:text-white transition">🔀 하이브리드</span>
+                  <span id="homeHybridCardCount" class="text-[10px] text-slate-400 group-hover:text-cyan-200 transition">0건 &gt;</span>
+                </div>
+                <p id="homeHybridCardBill" class="font-bold text-cyan-200 mt-1 text-xs sm:text-sm">0원</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 비활성화(OFF) 상태 시 노출되는 간소화 배너 -->
+          <div id="cardBillInactiveContent" class="hidden py-1 flex items-center justify-between text-[11px] text-slate-400">
+            <span>예상 카드 대금 계산 기능이 꺼져 있습니다.</span>
+          </div>
+        </div>
+
+        <!-- 이번 달 현금 지출 (체크카드 + 다이로움 + 현금/이체) 요약 카드 -->
+        <div id="homeCashExpenseCard" class="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 rounded-2xl p-4 text-white shadow-md relative overflow-hidden border border-emerald-800/40 transition-all">
+          <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-500/10 rounded-full blur-lg pointer-events-none"></div>
+          
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-1.5">
+              <span class="text-sm">💵</span>
+              <h3 class="text-xs font-bold text-emerald-200 tracking-wide">이번 달 현금 지출</h3>
+              <span id="cashExpenseActiveBadge" class="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 font-medium">직접결제</span>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+              <span id="cashExpenseToggleText" class="text-[10px] text-emerald-300 font-medium">활성</span>
+              <button id="cashExpenseToggleBtn" type="button" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-emerald-600 transition-colors duration-200 ease-in-out focus:outline-none" role="switch" aria-checked="true" aria-label="현금 지출 토글">
+                <span id="cashExpenseToggleKnob" class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-4"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 활성화(ON) 상태 시 노출되는 상세 내용 -->
+          <div id="cashExpenseActiveContent" class="space-y-2.5">
+            <div class="flex items-baseline justify-between">
+              <h2 id="homeTotalCashExpense" class="text-2xl font-black tracking-tight text-white">0원</h2>
+              <div class="flex items-center space-x-1.5">
+                <span id="homeCashExpenseCount" class="text-[11px] text-emerald-300 font-medium">총 0건</span>
+                <button id="homeFilterCashExpenseBtn" class="text-[10px] text-emerald-300 hover:text-white bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-lg transition" title="현금 지출 내역 모아보기">
+                  내역 확인 &rarr;
+                </button>
+              </div>
+            </div>
+
+            <!-- Breakdown: 체크카드 + 다이로움 + 현금/이체 (클릭 시 내역 정렬 이동) -->
+            <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-white/10 text-xs">
+              <!-- 체크카드 클릭 아이템 -->
+              <div data-home-payment="체크카드" class="home-pay-card-item bg-white/5 hover:bg-white/15 active:scale-[0.98] cursor-pointer rounded-xl p-2 border border-white/10 hover:border-emerald-400/50 transition-all group" title="체크카드 내역 모아보기">
+                <div class="flex items-center justify-between text-[10px] text-emerald-200">
+                  <span class="font-semibold group-hover:text-white transition truncate">🏦 체크</span>
+                  <span id="homeDebitCardCount" class="text-slate-400 group-hover:text-emerald-200 text-[9px] ml-0.5">0건&gt;</span>
+                </div>
+                <p id="homeDebitCardSum" class="font-bold text-white mt-1 text-[11px] truncate">0원</p>
+              </div>
+
+              <!-- 다이로움 클릭 아이템 -->
+              <div data-home-payment="다이로움" class="home-pay-card-item bg-white/5 hover:bg-white/15 active:scale-[0.98] cursor-pointer rounded-xl p-2 border border-white/10 hover:border-amber-400/50 transition-all group" title="다이로움 내역 모아보기">
+                <div class="flex items-center justify-between text-[10px] text-amber-200">
+                  <span class="font-semibold group-hover:text-white transition truncate">🪙 다이로움</span>
+                  <span id="homeDairooCount" class="text-slate-400 group-hover:text-amber-200 text-[9px] ml-0.5">0건&gt;</span>
+                </div>
+                <p id="homeDairooSum" class="font-bold text-amber-200 mt-1 text-[11px] truncate">0원</p>
+              </div>
+
+              <!-- 현금/이체 클릭 아이템 -->
+              <div data-home-payment="현금/이체" class="home-pay-card-item bg-white/5 hover:bg-white/15 active:scale-[0.98] cursor-pointer rounded-xl p-2 border border-white/10 hover:border-violet-400/50 transition-all group" title="현금/이체 내역 모아보기">
+                <div class="flex items-center justify-between text-[10px] text-violet-200">
+                  <span class="font-semibold group-hover:text-white transition truncate">💵 현금/이체</span>
+                  <span id="homeCashTransferCount" class="text-slate-400 group-hover:text-violet-200 text-[9px] ml-0.5">0건&gt;</span>
+                </div>
+                <p id="homeCashTransferSum" class="font-bold text-violet-200 mt-1 text-[11px] truncate">0원</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 비활성화(OFF) 상태 시 노출되는 간소화 배너 -->
+          <div id="cashExpenseInactiveContent" class="hidden py-1 flex items-center justify-between text-[11px] text-slate-400">
+            <span>이번 달 현금 지출 카드 기능이 꺼져 있습니다.</span>
+          </div>
+        </div>
+
+        <!-- Quick Summary Chart Card -->
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-1.5">
+              <h3 class="text-sm font-bold text-slate-800">카테고리별 지출 비율</h3>
+              <span id="homeCategoryChartBadge" class="text-[9px] px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-600 font-semibold border border-blue-100">활성</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button id="goToStatsBtn" class="text-xs text-blue-600 font-semibold hover:underline mr-1">통계 더보기 &rarr;</button>
+              <button id="homeCategoryChartToggleBtn" type="button" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-blue-600 transition-colors duration-200 ease-in-out focus:outline-none" role="switch" aria-checked="true" aria-label="차트 토글">
+                <span id="homeCategoryChartToggleKnob" class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-4"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 활성화 시 표시되는 차트 컨테이너 -->
+          <div id="homeCategoryChartActiveContent" class="relative h-44 flex items-center justify-center">
+            <canvas id="homeCategoryChart"></canvas>
+            <div id="homeChartEmptyNotice" class="hidden absolute text-xs text-slate-400 text-center">
+              이번 달 지출 내역이 없습니다.<br>하단의 <b>+</b> 버튼으로 첫 지출을 기록해보세요!
+            </div>
+          </div>
+
+          <!-- 비활성화 시 표시되는 간소화 메시지 -->
+          <div id="homeCategoryChartInactiveContent" class="hidden py-3 text-center text-xs text-slate-400">
+            카테고리별 지출 비율 차트가 비활성화되어 있습니다.
+          </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-800">최근 기록</h3>
+            <button id="goToHistoryBtn" class="text-xs text-slate-500 hover:text-slate-800">전체보기</button>
+          </div>
+          <div id="homeRecentList" class="space-y-2.5"></div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: HISTORY (Transactions List with 5 Payment Filter & Dropdown) -->
+      <section id="viewHistory" class="hidden space-y-3">
+        <!-- Type Filter Tabs -->
+        <div class="flex items-center justify-between bg-slate-100 p-1 rounded-xl text-xs font-medium text-slate-600">
+          <button id="filterAllBtn" class="flex-1 py-1.5 rounded-lg hover:text-slate-900 transition">전체</button>
+          <button id="filterExpenseBtn" class="flex-1 py-1.5 rounded-lg bg-white shadow-sm font-bold text-blue-600 transition">지출</button>
+          <button id="filterIncomeBtn" class="flex-1 py-1.5 rounded-lg hover:text-slate-900 transition">수입</button>
+        </div>
+
+        <!-- 모아보기 드롭다운 선택 영역 (결제수단 5종 & 카테고리 9종) -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 shadow-sm">
+          <!-- 결제수단 선택 드롭다운 -->
+          <div class="space-y-1">
+            <label for="historyPaymentSelect" class="block text-[11px] font-bold text-slate-600 flex items-center gap-1">
+              <span>💳</span> 결제수단 모아보기
+            </label>
+            <div class="relative">
+              <select id="historyPaymentSelect" class="w-full appearance-none bg-white border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl px-2.5 py-2 pr-7 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs">
+                <option value="ALL">전체 결제수단</option>
+                <option value="신용카드">💳 신용카드</option>
+                <option value="하이브리드카드">🔀 하이브리드카드</option>
+                <option value="체크카드">🏦 체크카드</option>
+                <option value="다이로움">🪙 다이로움</option>
+                <option value="현금/이체">💵 현금/이체</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- 카테고리 선택 드롭다운 -->
+          <div class="space-y-1">
+            <label for="historyCategorySelect" class="block text-[11px] font-bold text-slate-600 flex items-center gap-1">
+              <span>🏷️</span> 카테고리 모아보기
+            </label>
+            <div class="relative">
+              <select id="historyCategorySelect" class="w-full appearance-none bg-white border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl px-2.5 py-2 pr-7 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs">
+                <option value="ALL">전체 카테고리</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search Bar with Clear Button -->
+        <div class="relative">
+          <input id="historySearchInput" type="text" placeholder="메모, 카테고리, 결제수단 검색..." 
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+          <button id="clearSearchBtn" type="button" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 transition" title="검색어 지우기">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <!-- 검색 조건 옵션 및 실시간 검색 합계 요약 배너 -->
+        <div id="historySummaryCard" class="hidden bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200 rounded-xl p-3 space-y-1.5 transition-all">
+          <div class="flex items-center justify-between text-[11px] font-bold text-slate-600 border-b border-blue-100 pb-1.5">
+            <span class="flex items-center gap-1 text-blue-700">
+              <span>🔍</span>
+              <span id="summaryConditionLabel">검색 결과 합계</span>
+            </span>
+            <div class="flex items-center space-x-1.5 text-[10px]">
+              <label class="inline-flex items-center cursor-pointer select-none">
+                <input id="memoOnlySearchCheck" type="checkbox" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5">
+                <span class="ml-1 text-slate-600 font-medium">메모만 검색</span>
+              </label>
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-xs pt-0.5">
+            <div>
+              <span class="text-slate-500 text-[11px]">총 </span>
+              <span id="summaryCountLabel" class="font-bold text-slate-800">0건</span>
+            </div>
+            <div class="flex items-center space-x-2 text-right">
+              <span id="summaryExpenseLabel" class="font-extrabold text-rose-600">-0원</span>
+              <span id="summaryIncomeDivider" class="text-slate-300 hidden">|</span>
+              <span id="summaryIncomeLabel" class="font-extrabold text-emerald-600 hidden">+0원</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grouped Transactions List -->
+        <div id="historyGroupedList" class="space-y-4 pt-1"></div>
+      </section>
+
+      <!-- VIEW 3: STATS (Analytics & Detailed Breakdown) -->
+      <section id="viewStats" class="hidden space-y-4">
+        
+        <!-- SECTION A: 결제수단 5종 지출 분석 -->
+        <div class="bg-gradient-to-b from-white to-slate-50 rounded-2xl p-4 border border-slate-200/80 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span class="text-blue-600 text-base">💳</span>
+              <span>결제수단별 지출 분석</span>
+            </h3>
+            <span class="text-[11px] text-slate-400">이번 달 지출 기준</span>
+          </div>
+
+          <!-- Payment Chart -->
+          <div class="relative h-48 flex items-center justify-center">
+            <canvas id="statsPaymentChart"></canvas>
+            <div id="statsPaymentEmptyNotice" class="hidden absolute text-xs text-slate-400 text-center">
+              지출 내역이 없습니다.
+            </div>
+          </div>
+
+          <!-- Interactive Drill-Down Cards for 5 Payment Methods -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-bold text-slate-700">수단별 지표 & 소비 패턴</p>
+              <span class="text-[10px] text-slate-400">카드를 누르면 상세 내역 확인</span>
+            </div>
+            <div id="statsPaymentMethodCards" class="space-y-2.5"></div>
+          </div>
+
+          <!-- Drill-down result preview -->
+          <div id="paymentDrilldownContainer" class="hidden pt-3 border-t border-slate-200">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-xs font-bold text-blue-700 flex items-center gap-1">
+                <span>🔍</span> <span id="paymentDrilldownLabel">신용카드</span> 상세 소비 내역
+              </h4>
+              <button id="closeDrilldownBtn" class="text-[11px] text-slate-400 hover:text-slate-600">닫기 ✕</button>
+            </div>
+            <div id="paymentDrilldownList" class="space-y-1.5 max-h-56 overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+
+        <!-- SECTION B: 카테고리 9종별 분석 -->
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+            <span>🏷️</span> 카테고리별 지출 분석
+          </h3>
+          <div class="relative h-52 mb-4">
+            <canvas id="statsCategoryChart"></canvas>
+          </div>
+          <div id="statsCategoryList" class="space-y-2 border-t border-slate-100 pt-3"></div>
+        </div>
+
+        <!-- SECTION C: 일별 지출 추이 -->
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+            <span>📅</span> 일별 지출 추이
+          </h3>
+          <div class="relative h-44">
+            <canvas id="statsDailyChart"></canvas>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- VIEW 4: SETTINGS (Data & Config) -->
+      <section id="viewSettings" class="hidden space-y-4">
+        <!-- Monthly Budget Setting Box -->
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-800 mb-2">월 목표 예산 관리</h3>
+          <p class="text-xs text-slate-500 mb-3">매달 계획적인 소비를 위해 목표 예산을 설정해 두세요.</p>
+          <div class="flex items-center space-x-2">
+            <input id="settingBudgetInput" type="number" placeholder="예: 1000000" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button id="saveSettingBudgetBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs px-4 py-2.5 rounded-xl transition">저장</button>
+          </div>
+        </div>
+
+        <!-- 예상 카드값 활성화/비활성화 설정 박스 -->
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">예상 카드 대금 카드 표시</h3>
+              <p class="text-xs text-slate-500 mt-0.5">홈 화면의 신용카드 + 하이브리드카드 대금 요약 카드를 켜거나 끕니다.</p>
+            </div>
+            <button id="settingCardBillToggleBtn" type="button" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-blue-600 transition-colors duration-200 ease-in-out focus:outline-none" role="switch" aria-checked="true" aria-label="설정 예상 카드 대금 토글">
+              <span id="settingCardBillToggleKnob" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-5"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 이번 달 현금 지출 활성화/비활성화 설정 박스 -->
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">이번 달 현금 지출 카드 표시</h3>
+              <p class="text-xs text-slate-500 mt-0.5">홈 화면의 체크카드 + 다이로움 + 현금/이체 요약 카드를 켜거나 끕니다.</p>
+            </div>
+            <button id="settingCashExpenseToggleBtn" type="button" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-emerald-600 transition-colors duration-200 ease-in-out focus:outline-none" role="switch" aria-checked="true" aria-label="설정 현금 지출 토글">
+              <span id="settingCashExpenseToggleKnob" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-5"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 카테고리별 지출 비율 차트 활성화/비활성화 설정 박스 -->
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">카테고리별 지출 비율 차트 표시</h3>
+              <p class="text-xs text-slate-500 mt-0.5">홈 화면의 도넛 차트 위젯을 켜거나 끕니다.</p>
+            </div>
+            <button id="settingCategoryChartToggleBtn" type="button" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-blue-600 transition-colors duration-200 ease-in-out focus:outline-none" role="switch" aria-checked="true" aria-label="설정 차트 토글">
+              <span id="settingCategoryChartToggleKnob" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-5"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm space-y-3">
+          <h3 class="text-sm font-bold text-slate-800">데이터 백업 및 내보내기</h3>
+          <p class="text-xs text-slate-500">결제수단 5종과 카테고리 9종, 할부 분할 내역이 모두 기기에 저장됩니다.</p>
+          
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button id="exportCsvBtn" class="flex items-center justify-center space-x-1.5 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>엑셀(CSV) 다운로드</span>
+            </button>
+            <button id="backupJsonBtn" class="flex items-center justify-center space-x-1.5 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition">
+              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <span>전체 백업(JSON)</span>
+            </button>
+          </div>
+
+          <div class="pt-2 border-t border-slate-100 flex flex-col space-y-2">
+            <label class="block text-xs font-medium text-slate-600">백업 파일 복원</label>
+            <input id="restoreJsonInput" type="file" accept=".json" class="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+          </div>
+        </div>
+
+        <!-- Sample Data & Reset -->
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm space-y-2">
+          <h3 class="text-sm font-bold text-slate-800">샘플 및 초기화</h3>
+          <div class="flex space-x-2">
+            <button id="loadSampleDataBtn" class="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition">할부 샘플 불러오기</button>
+            <button id="resetAllDataBtn" class="flex-1 py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-medium transition">모든 데이터 초기화</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar with Center Floating Add Button -->
+    <nav class="fixed bottom-0 left-0 right-0 z-30 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 py-1.5 flex items-center justify-around shadow-lg">
+      <button id="navHomeBtn" class="flex flex-col items-center py-1 px-3 text-blue-600 font-semibold transition" title="홈">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        <span class="text-[10px]">홈</span>
+      </button>
+
+      <button id="navHistoryBtn" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-slate-600 font-medium transition" title="내역">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+        <span class="text-[10px]">내역</span>
+      </button>
+
+      <!-- Center Floating Button -->
+      <button id="openAddModalBtn" class="-mt-5 bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-full p-3.5 shadow-lg shadow-blue-500/40 transform active:scale-95 transition" title="기록 추가">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+      </button>
+
+      <button id="navStatsBtn" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-slate-600 font-medium transition" title="통계">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+        <span class="text-[10px]">통계</span>
+      </button>
+
+      <button id="navSettingsBtn" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-slate-600 font-medium transition" title="설정">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span class="text-[10px]">설정</span>
+      </button>
+    </nav>
+
+    <!-- SLIDE-UP MODAL: Add / Edit Transaction -->
+    <div id="transactionModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end justify-center transition-opacity duration-300">
+      <div class="w-full max-w-md bg-white rounded-t-3xl p-5 pb-8 shadow-2xl max-h-[92vh] overflow-y-auto space-y-4">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <h3 id="modalTitle" class="text-base font-bold text-slate-800">새로운 기록 추가</h3>
+          <button id="closeModalBtn" class="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100" title="닫기">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <!-- Type Selector -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+          <button id="typeExpenseBtn" class="py-2 rounded-lg font-bold text-xs bg-white text-rose-600 shadow-sm transition">지출 (-)</button>
+          <button id="typeIncomeBtn" class="py-2 rounded-lg font-bold text-xs text-slate-500 hover:text-slate-800 transition">수입 (+)</button>
+        </div>
+
+        <!-- Amount Input -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between items-center">
+            <label for="inputAmount" class="block text-xs font-semibold text-slate-700">금액 (원)</label>
+            <span id="installmentPreviewNote" class="text-[11px] text-blue-600 font-semibold hidden"></span>
+          </div>
+          <div class="relative">
+            <input id="inputAmount" type="number" inputmode="numeric" placeholder="0" 
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-right pr-10">
+            <span class="absolute right-4 top-3.5 text-slate-400 text-sm font-semibold">원</span>
+          </div>
+          <!-- Quick Amount Buttons -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button type="button" class="quick-amt-btn px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-medium" data-amt="1000">+1천</button>
+            <button type="button" class="quick-amt-btn px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-medium" data-amt="5000">+5천</button>
+            <button type="button" class="quick-amt-btn px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-medium" data-amt="10000">+1만</button>
+            <button type="button" class="quick-amt-btn px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-medium" data-amt="50000">+5만</button>
+            <button type="button" class="quick-amt-btn px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-medium" data-amt="100000">+10만</button>
+            <button id="clearAmtBtn" type="button" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-100 text-xs text-slate-400 hover:text-rose-600 font-medium">초기화</button>
+          </div>
+        </div>
+
+        <!-- Category Grid (지출 9종 / 수입 5종) -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-slate-700">카테고리</label>
+          <div id="categoryGrid" class="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1"></div>
+        </div>
+
+        <!-- Date Picker -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label for="inputDate" class="block text-xs font-semibold text-slate-700">날짜 (할부 1회차 기준일)</label>
+            <div class="flex space-x-1">
+              <button id="dateTodayBtn" type="button" class="text-[11px] px-2 py-0.5 rounded bg-blue-50 text-blue-600 font-medium hover:bg-blue-100">오늘</button>
+              <button id="dateYesterdayBtn" type="button" class="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium hover:bg-slate-200">어제</button>
+            </div>
+          </div>
+          <input id="inputDate" type="date" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <!-- Payment Method Selection (5개) -->
+        <div id="paymentSection" class="space-y-1.5">
+          <label class="block text-xs font-semibold text-slate-700">결제수단 선택</label>
+          <div class="grid grid-cols-5 gap-1.5 text-xs">
+            <button type="button" class="pay-method-btn py-2 px-1 rounded-xl border border-blue-500 bg-blue-50 text-blue-700 font-semibold text-center flex flex-col items-center justify-center transition shadow-sm" data-method="신용카드">
+              <span class="text-sm">💳</span>
+              <span class="text-[10px] mt-0.5 truncate w-full">신용카드</span>
+            </button>
+            <button type="button" class="pay-method-btn py-2 px-1 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-center flex flex-col items-center justify-center transition" data-method="체크카드">
+              <span class="text-sm">🏦</span>
+              <span class="text-[10px] mt-0.5 truncate w-full">체크카드</span>
+            </button>
+            <button type="button" class="pay-method-btn py-2 px-1 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-center flex flex-col items-center justify-center transition" data-method="다이로움">
+              <span class="text-sm">🪙</span>
+              <span class="text-[10px] mt-0.5 truncate w-full">다이로움</span>
+            </button>
+            <button type="button" class="pay-method-btn py-2 px-1 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-center flex flex-col items-center justify-center transition" data-method="현금/이체">
+              <span class="text-sm">💵</span>
+              <span class="text-[10px] mt-0.5 truncate w-full">현금/이체</span>
+            </button>
+            <button type="button" class="pay-method-btn py-2 px-1 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-center flex flex-col items-center justify-center transition" data-method="하이브리드카드">
+              <span class="text-sm">🔀</span>
+              <span class="text-[10px] mt-0.5 truncate w-full">하이브리드</span>
+            </button>
+          </div>
+
+          <!-- 신용카드 전용 할부 설정 옵션 -->
+          <div id="creditCardInstallmentBox" class="mt-2.5 p-3 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-blue-900 flex items-center gap-1">
+                <span>🗓️</span> 신용카드 할부 분할 설정
+              </span>
+              <p class="text-[10px] text-blue-700 mt-0.5">선택한 개월 수로 자동 분할되어 매월 등록됩니다.</p>
+            </div>
+            <select id="inputInstallmentMonths" class="bg-white border border-blue-200 text-blue-800 text-xs font-bold rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="1">일시불</option>
+              <option value="2">2개월 할부</option>
+              <option value="3">3개월 할부</option>
+              <option value="4">4개월 할부</option>
+              <option value="5">5개월 할부</option>
+              <option value="6">6개월 할부</option>
+              <option value="10">10개월 할부</option>
+              <option value="12">12개월 할부</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Memo Input -->
+        <div class="space-y-1.5">
+          <label for="inputMemo" class="block text-xs font-semibold text-slate-700">메모 / 내용 (선택)</label>
+          <input id="inputMemo" type="text" placeholder="예: 점심 식사, 편의점 간식, 패딩 구매 등" 
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <!-- Action Button -->
+        <div class="pt-2 flex space-x-2">
+          <button id="saveTransactionBtn" class="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/30 transition">
+            기록 저장하기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Budget Quick Setting -->
+    <div id="budgetModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl space-y-4">
+        <h3 class="text-sm font-bold text-slate-800">이번 달 목표 예산 설정</h3>
+        <p class="text-xs text-slate-500">지출 계획에 맞게 이번 달 사용할 최대 예산을 입력해주세요.</p>
+        <div class="relative">
+          <input id="modalBudgetInput" type="number" inputmode="numeric" placeholder="1000000" 
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-base font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-right pr-9">
+          <span class="absolute right-3 top-3 text-xs font-semibold text-slate-400">원</span>
+        </div>
+        <div class="flex space-x-2 pt-1">
+          <button id="closeBudgetModalBtn" class="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">취소</button>
+          <button id="submitBudgetModalBtn" class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition">적용</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Confirmation Box -->
+    <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl space-y-3">
+        <h3 id="confirmTitle" class="text-sm font-bold text-slate-800">확인</h3>
+        <p id="confirmMessage" class="text-xs text-slate-600 leading-relaxed"></p>
+        <div class="flex space-x-2 pt-2">
+          <button id="confirmCancelBtn" class="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">취소</button>
+          <button id="confirmOkBtn" class="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition">삭제/진행</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white text-xs px-4 py-2 rounded-full shadow-lg pointer-events-none opacity-0 transition-opacity duration-300 flex items-center space-x-1.5">
+      <span id="toastIcon">✓</span>
+      <span id="toastMessage">저장되었습니다</span>
+    </div>
+
+  </div>
+
+  <script>
+    // --- Initial State & Configuration ---
+    const STORAGE_KEY = 'mobile_budget_data_v8_installment';
+    
+    // 5 Payment Methods
+    const PAYMENT_METHODS = [
+      { key: '신용카드', label: '신용카드', icon: '💳', color: '#2563eb', bgLight: 'bg-blue-50', textLight: 'text-blue-700', border: 'border-blue-200' },
+      { key: '체크카드', label: '체크카드', icon: '🏦', color: '#059669', bgLight: 'bg-emerald-50', textLight: 'text-emerald-700', border: 'border-emerald-200' },
+      { key: '다이로움', label: '다이로움', icon: '🪙', color: '#d97706', bgLight: 'bg-amber-50', textLight: 'text-amber-700', border: 'border-amber-200' },
+      { key: '현금/이체', label: '현금/이체', icon: '💵', color: '#7c3aed', bgLight: 'bg-violet-50', textLight: 'text-violet-700', border: 'border-violet-200' },
+      { key: '하이브리드카드', label: '하이브리드카드', icon: '🔀', color: '#0891b2', bgLight: 'bg-cyan-50', textLight: 'text-cyan-700', border: 'border-cyan-200' }
+    ];
+
+    // 9 Expense Categories
+    const EXPENSE_CATEGORIES = [
+      { id: 'food', name: '식비', icon: '🍚', color: 'bg-orange-50 text-orange-600 border-orange-200' },
+      { id: 'convenience', name: '편의점', icon: '🏪', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+      { id: 'mart', name: '마트/생필품', icon: '🛒', color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+      { id: 'shopping', name: '쇼핑', icon: '🛍️', color: 'bg-pink-50 text-pink-600 border-pink-200' },
+      { id: 'transport', name: '교통', icon: '🚌', color: 'bg-blue-50 text-blue-600 border-blue-200' },
+      { id: 'living', name: '주거/통신', icon: '🏠', color: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
+      { id: 'leisure', name: '문화/여가', icon: '🎬', color: 'bg-purple-50 text-purple-600 border-purple-200' },
+      { id: 'medical', name: '의료/건강', icon: '💊', color: 'bg-teal-50 text-teal-600 border-teal-200' },
+      { id: 'etc_exp', name: '기타지출', icon: '📝', color: 'bg-slate-50 text-slate-600 border-slate-200' }
+    ];
+
+    // 5 Income Categories
+    const INCOME_CATEGORIES = [
+      { id: 'salary', name: '급여', icon: '💰', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      { id: 'allowance', name: '용돈', icon: '🧧', color: 'bg-rose-50 text-rose-700 border-rose-200' },
+      { id: 'bonus', name: '보너스/상여', icon: '🎁', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+      { id: 'side', name: '부수입/투자', icon: '📈', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+      { id: 'etc_inc', name: '기타수입', icon: '🏷️', color: 'bg-slate-50 text-slate-600 border-slate-200' }
+    ];
+
+    // State
+    let state = {
+      currentYear: 2026,
+      currentMonth: 11,
+      transactions: [],
+      budget: 1200000,
+      isCardBillActive: true,
+      isCashExpenseActive: true,
+      isCategoryChartActive: true,
+      activeView: 'home',
+      viewStack: ['home'],
+      activeFilter: 'expense', // default to expense
+      historyPaymentFilter: 'ALL',
+      historyCategoryFilter: 'ALL',
+      searchQuery: '',
+      memoOnlySearch: false,
+      modalMode: 'create',
+      editingId: null,
+      selectedType: 'expense',
+      selectedCategory: '식비',
+      selectedPaymentMethod: '신용카드',
+      statsSelectedMethod: null
+    };
+
+    // Chart instances
+    let homeChart = null;
+    let statsCatChart = null;
+    let statsDayChart = null;
+    let statsPaymentChart = null;
+
+    // --- Helper Functions ---
+    function formatKRW(val, prefix = '', suffix = '원') {
+      return `${prefix}${(Number(val) || 0).toLocaleString('ko-KR')}${suffix}`;
+    }
+
+    function getTodayString() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+
+    function getYesterdayString() {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function addMonthsToDate(dateString, monthsToAdd) {
+      const parts = dateString.split('-').map(Number);
+      const originalYear = parts[0];
+      const originalMonth = parts[1] - 1;
+      const originalDay = parts[2];
+
+      const targetDate = new Date(originalYear, originalMonth + monthsToAdd, 1);
+      const targetYear = targetDate.getFullYear();
+      const targetMonth = targetDate.getMonth();
+      const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+
+      const finalDay = Math.min(originalDay, daysInTargetMonth);
+      return `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(finalDay).padStart(2, '0')}`;
+    }
+
+    function showToast(msg, icon = '✓') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMessage').textContent = msg;
+      document.getElementById('toastIcon').textContent = icon;
+      toast.classList.remove('opacity-0');
+      setTimeout(() => toast.classList.add('opacity-0'), 2200);
+    }
+
+    let confirmCallback = null;
+    function showConfirm(title, message, callback) {
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMessage').textContent = message;
+      confirmCallback = callback;
+      document.getElementById('confirmModal').classList.remove('hidden');
+      pushNavigationState('modal_confirm');
+      updateBackButtonState();
+    }
+
+    // --- Navigation & Back Button Management ---
+    function updateBackButtonState() {
+      const backBtn = document.getElementById('headerBackBtn');
+      const isAnyModalOpen = isModalActive();
+      const isDrilldownOpen = !document.getElementById('paymentDrilldownContainer').classList.contains('hidden');
+
+      if (isAnyModalOpen || isDrilldownOpen || state.activeView !== 'home') {
+        backBtn.classList.remove('hidden');
+      } else {
+        backBtn.classList.add('hidden');
+      }
+    }
+
+    function isModalActive() {
+      const txModal = !document.getElementById('transactionModal').classList.contains('hidden');
+      const budgetModal = !document.getElementById('budgetModal').classList.contains('hidden');
+      const confirmModal = !document.getElementById('confirmModal').classList.contains('hidden');
+      return txModal || budgetModal || confirmModal;
+    }
+
+    function pushNavigationState(type) {
+      try {
+        window.history.pushState({ type: type, timestamp: Date.now() }, '');
+      } catch (e) {
+        console.warn('History pushState error:', e);
+      }
+    }
+
+    function handleNavigateBack() {
+      const confirmModal = document.getElementById('confirmModal');
+      if (!confirmModal.classList.contains('hidden')) {
+        confirmModal.classList.add('hidden');
+        confirmCallback = null;
+        updateBackButtonState();
+        return;
+      }
+
+      const budgetModal = document.getElementById('budgetModal');
+      if (!budgetModal.classList.contains('hidden')) {
+        budgetModal.classList.add('hidden');
+        updateBackButtonState();
+        return;
+      }
+
+      const txModal = document.getElementById('transactionModal');
+      if (!txModal.classList.contains('hidden')) {
+        closeModal();
+        return;
+      }
+
+      const drilldownContainer = document.getElementById('paymentDrilldownContainer');
+      if (!drilldownContainer.classList.contains('hidden')) {
+        drilldownContainer.classList.add('hidden');
+        state.statsSelectedMethod = null;
+        renderPaymentStats(getMonthTransactions().filter(t => t.type === 'expense'), 
+          getMonthTransactions().filter(t => t.type === 'expense').reduce((a,c) => a + Number(c.amount), 0));
+        updateBackButtonState();
+        return;
+      }
+
+      if (state.activeView === 'history' && (state.historyPaymentFilter !== 'ALL' || state.historyCategoryFilter !== 'ALL' || state.searchQuery)) {
+        resetHistoryFilters();
+        updateBackButtonState();
+        return;
+      }
+
+      if (state.viewStack.length > 1) {
+        state.viewStack.pop();
+        const prevView = state.viewStack[state.viewStack.length - 1] || 'home';
+        switchView(prevView, false);
+      } else if (state.activeView !== 'home') {
+        switchView('home', false);
+      }
+    }
+
+    function resetHistoryFilters() {
+      state.historyPaymentFilter = 'ALL';
+      state.historyCategoryFilter = 'ALL';
+      state.searchQuery = '';
+      const paySelect = document.getElementById('historyPaymentSelect');
+      const catSelect = document.getElementById('historyCategorySelect');
+      const searchInput = document.getElementById('historySearchInput');
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (paySelect) paySelect.value = 'ALL';
+      if (catSelect) catSelect.value = 'ALL';
+      if (searchInput) searchInput.value = '';
+      if (clearBtn) clearBtn.classList.add('hidden');
+      renderHistory();
+    }
+
+    function populateHistoryCategorySelect() {
+      const select = document.getElementById('historyCategorySelect');
+      if (!select) return;
+      const prevVal = state.historyCategoryFilter;
+      select.innerHTML = '<option value="ALL">전체 카테고리</option>';
+
+      let cats = [];
+      if (state.activeFilter === 'expense') {
+        cats = EXPENSE_CATEGORIES;
+      } else if (state.activeFilter === 'income') {
+        cats = INCOME_CATEGORIES;
+      } else {
+        cats = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
+      }
+
+      const seen = new Set();
+      cats.forEach(c => {
+        if (!seen.has(c.name)) {
+          seen.add(c.name);
+          const opt = document.createElement('option');
+          opt.value = c.name;
+          opt.textContent = `${c.icon} ${c.name}`;
+          select.appendChild(opt);
+        }
+      });
+
+      if (seen.has(prevVal)) {
+        select.value = prevVal;
+      } else {
+        state.historyCategoryFilter = 'ALL';
+        select.value = 'ALL';
+      }
+    }
+
+    function mapToTargetMethod(methodStr) {
+      if (!methodStr) return '신용카드';
+      if (methodStr.includes('하이브리드')) return '하이브리드카드';
+      if (methodStr.includes('다이로움')) return '다이로움';
+      if (methodStr.includes('신용')) return '신용카드';
+      if (methodStr.includes('체크')) return '체크카드';
+      if (methodStr.includes('현금') || methodStr.includes('이체')) return '현금/이체';
+      if (methodStr.includes('페이') || methodStr.includes('간편')) return '다이로움';
+      return '신용카드';
+    }
+
+    // --- Data Persistence ---
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('mobile_budget_data_v8_installment') || localStorage.getItem('mobile_budget_data_v7_complete');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          state.transactions = (parsed.transactions || []).map(t => ({
+            ...t,
+            method: mapToTargetMethod(t.method)
+          }));
+          state.budget = parsed.budget || 1200000;
+          if (parsed.isCardBillActive !== undefined) state.isCardBillActive = parsed.isCardBillActive;
+          if (parsed.isCashExpenseActive !== undefined) state.isCashExpenseActive = parsed.isCashExpenseActive;
+          if (parsed.isCategoryChartActive !== undefined) state.isCategoryChartActive = parsed.isCategoryChartActive;
+        } else {
+          loadSampleData(false);
+        }
+      } catch (e) {
+        console.error("Local storage error:", e);
+        loadSampleData(false);
+      }
+    }
+
+    function saveData() {
+      try {
+        const data = {
+          transactions: state.transactions,
+          budget: state.budget,
+          isCardBillActive: state.isCardBillActive,
+          isCashExpenseActive: state.isCashExpenseActive,
+          isCategoryChartActive: state.isCategoryChartActive
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {
+        console.error("Save error:", e);
+        showToast("저장 공간이 부족합니다.", "⚠️");
+      }
+    }
+
+    function loadSampleData(notify = true) {
+      const groupId = 'sample_installment_group_1';
+      const sample = [
+        { id: 't1', type: 'income', amount: 3200000, category: '급여', date: '2026-11-01', method: '현금/이체', memo: '11월 정기 급여' },
+        { id: 't2', type: 'expense', amount: 33334, category: '쇼핑', date: '2026-11-05', method: '신용카드', memo: '겨울 외투 구매 (3개월 할부 중 1/3회차)', installmentTotalMonths: 3, installmentCurrentMonth: 1, installmentGroupId: groupId },
+        { id: 't3', type: 'expense', amount: 33333, category: '쇼핑', date: '2026-12-05', method: '신용카드', memo: '겨울 외투 구매 (3개월 할부 중 2/3회차)', installmentTotalMonths: 3, installmentCurrentMonth: 2, installmentGroupId: groupId },
+        { id: 't4', type: 'expense', amount: 33333, category: '쇼핑', date: '2027-01-05', method: '신용카드', memo: '겨울 외투 구매 (3개월 할부 중 3/3회차)', installmentTotalMonths: 3, installmentCurrentMonth: 3, installmentGroupId: groupId },
+        { id: 't5', type: 'expense', amount: 12500, category: '식비', date: '2026-11-02', method: '다이로움', memo: '동네 식당 점심 식사' },
+        { id: 't6', type: 'expense', amount: 4800, category: '편의점', date: '2026-11-03', method: '하이브리드카드', memo: '편의점 간식 결제' },
+        { id: 't7', type: 'expense', amount: 1550, category: '교통', date: '2026-11-04', method: '체크카드', memo: '지하철 출퇴근' },
+        { id: 't8', type: 'expense', amount: 76000, category: '마트/생필품', date: '2026-11-04', method: '신용카드', memo: '주말 장보기' },
+        { id: 't9', type: 'expense', amount: 18000, category: '식비', date: '2026-11-05', method: '현금/이체', memo: '전통시장 채소' }
+      ];
+      state.transactions = sample;
+      state.budget = 1200000;
+      saveData();
+      renderAll();
+      if (notify) showToast("할부 샘플 데이터가 로드되었습니다.");
+    }
+
+    // --- UI View Switching ---
+    function switchView(viewName, pushToStack = true) {
+      if (pushToStack && state.activeView !== viewName) {
+        state.viewStack.push(viewName);
+        pushNavigationState('view_' + viewName);
+      }
+      state.activeView = viewName;
+
+      const views = {
+        home: document.getElementById('viewHome'),
+        history: document.getElementById('viewHistory'),
+        stats: document.getElementById('viewStats'),
+        settings: document.getElementById('viewSettings')
+      };
+      const navBtns = {
+        home: document.getElementById('navHomeBtn'),
+        history: document.getElementById('navHistoryBtn'),
+        stats: document.getElementById('navStatsBtn'),
+        settings: document.getElementById('navSettingsBtn')
+      };
+
+      Object.keys(views).forEach(k => {
+        if (k === viewName) views[k].classList.remove('hidden');
+        else views[k].classList.add('hidden');
+      });
+
+      Object.keys(navBtns).forEach(k => {
+        if (k === viewName) {
+          navBtns[k].className = 'flex flex-col items-center py-1 px-3 text-blue-600 font-semibold transition';
+        } else {
+          navBtns[k].className = 'flex flex-col items-center py-1 px-3 text-slate-400 hover:text-slate-600 font-medium transition';
+        }
+      });
+
+      updateBackButtonState();
+
+      if (viewName === 'stats') renderStats();
+      else if (viewName === 'history') {
+        populateHistoryCategorySelect();
+        renderHistory();
+      }
+      else if (viewName === 'home') renderHome();
+      else if (viewName === 'settings') {
+        document.getElementById('settingBudgetInput').value = state.budget;
+      }
+    }
+
+    function getMonthTransactions() {
+      const ymPrefix = `${state.currentYear}-${String(state.currentMonth).padStart(2, '0')}`;
+      return state.transactions.filter(t => t.date && t.date.startsWith(ymPrefix));
+    }
+
+    // --- 결제수단 클릭 시 내역 정렬 모아보기 공통 핸들러 ---
+    function filterToPaymentHistory(methodName) {
+      state.activeFilter = 'expense';
+      state.historyPaymentFilter = methodName;
+      state.historyCategoryFilter = 'ALL';
+      state.searchQuery = '';
+
+      // 상단 필터 탭 UI 동기화
+      const filterAll = document.getElementById('filterAllBtn');
+      const filterExp = document.getElementById('filterExpenseBtn');
+      const filterInc = document.getElementById('filterIncomeBtn');
+      if (filterAll && filterExp && filterInc) {
+        [filterAll, filterInc].forEach(b => b.className = 'flex-1 py-1.5 rounded-lg hover:text-slate-900 transition text-slate-600');
+        filterExp.className = 'flex-1 py-1.5 rounded-lg bg-white shadow-sm font-bold text-blue-600 transition';
+      }
+
+      // 셀렉트 박스 동기화
+      const pSelect = document.getElementById('historyPaymentSelect');
+      if (pSelect) pSelect.value = methodName;
+
+      const cSelect = document.getElementById('historyCategorySelect');
+      if (cSelect) cSelect.value = 'ALL';
+
+      const searchInput = document.getElementById('historySearchInput');
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (searchInput) searchInput.value = '';
+      if (clearBtn) clearBtn.classList.add('hidden');
+
+      switchView('history');
+      renderHistory();
+      showToast(`'${methodName}' 내역으로 정렬되었습니다.`);
+    }
+
+    // --- Render Home ---
+    function renderHome() {
+      document.getElementById('currentMonthLabel').textContent = `${state.currentYear}.${String(state.currentMonth).padStart(2, '0')}`;
+      const items = getMonthTransactions();
+
+      let totalIncome = 0;
+      let totalExpense = 0;
+      items.forEach(t => {
+        if (t.type === 'income') totalIncome += Number(t.amount);
+        else totalExpense += Number(t.amount);
+      });
+
+      const remainingBudget = state.budget - totalExpense;
+      const spentPercent = state.budget > 0 ? Math.min(Math.round((totalExpense / state.budget) * 100), 100) : 0;
+
+      // 1. 목표 예산 게이지 갱신
+      document.getElementById('homeTargetBudgetLabel').textContent = formatKRW(state.budget);
+      document.getElementById('homeRemainingBudget').textContent = (remainingBudget >= 0 ? '' : '-') + formatKRW(Math.abs(remainingBudget));
+      document.getElementById('homeRemainingBudget').className = `text-2xl font-bold tracking-tight mt-0.5 ${remainingBudget < 0 ? 'text-amber-300' : 'text-white'}`;
+      
+      document.getElementById('homeBudgetSpentPercent').textContent = `${spentPercent}% 소진`;
+      const pBar = document.getElementById('homeBudgetProgressBar');
+      pBar.style.width = `${spentPercent}%`;
+      if (spentPercent > 90) {
+        pBar.className = 'bg-gradient-to-r from-pink-400 to-rose-400 h-2 rounded-full transition-all duration-500';
+      } else if (spentPercent > 70) {
+        pBar.className = 'bg-gradient-to-r from-pink-300 to-pink-400 h-2 rounded-full transition-all duration-500';
+      } else {
+        pBar.className = 'bg-gradient-to-r from-pink-200 to-pink-300 h-2 rounded-full transition-all duration-500';
+      }
+
+      // 2. 총 수입 대비 지출 소진율 그래프
+      const incomeSpentPercent = totalIncome > 0 ? Math.min(Math.round((totalExpense / totalIncome) * 100), 100) : (totalExpense > 0 ? 100 : 0);
+      const incBar = document.getElementById('homeIncomeProgressBar');
+      const incSpentPercentLabel = document.getElementById('homeIncomeSpentPercent');
+      const incGraphTargetLabel = document.getElementById('homeIncomeGraphTargetLabel');
+
+      if (incGraphTargetLabel) incGraphTargetLabel.textContent = formatKRW(totalIncome);
+      if (incSpentPercentLabel) {
+        if (totalIncome === 0 && totalExpense > 0) {
+          incSpentPercentLabel.textContent = '수입 없음';
+        } else {
+          incSpentPercentLabel.textContent = `${incomeSpentPercent}% 사용`;
+        }
+      }
+      if (incBar) {
+        incBar.style.width = `${incomeSpentPercent}%`;
+        incBar.className = 'bg-gradient-to-r from-emerald-400 to-teal-400 h-2 rounded-full transition-all duration-500';
+      }
+
+      document.getElementById('homeTotalIncome').textContent = `+${formatKRW(totalIncome)}`;
+      document.getElementById('homeTotalExpense').textContent = `-${formatKRW(totalExpense)}`;
+
+      // 예상 카드값 & 현금 지출 카드 UI
+      renderCardBillUI(items);
+      renderCashExpenseUI(items);
+
+      const recentContainer = document.getElementById('homeRecentList');
+      recentContainer.innerHTML = '';
+      const sorted = [...items].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+      const top5 = sorted.slice(0, 5);
+
+      if (top5.length === 0) {
+        recentContainer.innerHTML = `
+          <div class="py-6 text-center text-xs text-slate-400">
+            이번 달 등록된 내역이 없습니다.
+          </div>
+        `;
+      } else {
+        top5.forEach(t => {
+          recentContainer.appendChild(createTransactionCard(t, true));
+        });
+      }
+
+      renderHomeCategoryChartUI(items.filter(t => t.type === 'expense'));
+    }
+
+    // 이번 달 현금 지출 UI 렌더링
+    function renderCashExpenseUI(items) {
+      const activeContent = document.getElementById('cashExpenseActiveContent');
+      const inactiveContent = document.getElementById('cashExpenseInactiveContent');
+      const toggleBtn = document.getElementById('cashExpenseToggleBtn');
+      const toggleKnob = document.getElementById('cashExpenseToggleKnob');
+      const toggleText = document.getElementById('cashExpenseToggleText');
+      const activeBadge = document.getElementById('cashExpenseActiveBadge');
+
+      const settingToggleBtn = document.getElementById('settingCashExpenseToggleBtn');
+      const settingToggleKnob = document.getElementById('settingCashExpenseToggleKnob');
+
+      if (state.isCashExpenseActive) {
+        activeContent.classList.remove('hidden');
+        inactiveContent.classList.add('hidden');
+        if (toggleText) {
+          toggleText.textContent = '활성';
+          toggleText.className = 'text-[10px] text-emerald-300 font-bold';
+        }
+        if (activeBadge) {
+          activeBadge.textContent = '직접결제';
+          activeBadge.className = 'text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 font-medium';
+        }
+
+        if (toggleBtn) toggleBtn.className = 'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-emerald-600 transition-colors duration-200 ease-in-out focus:outline-none';
+        if (toggleKnob) toggleKnob.className = 'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-4';
+
+        if (settingToggleBtn) settingToggleBtn.className = 'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-emerald-600 transition-colors duration-200 ease-in-out focus:outline-none';
+        if (settingToggleKnob) settingToggleKnob.className = 'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-5';
+
+        const expenseItems = items.filter(t => t.type === 'expense');
+        const debitItems = expenseItems.filter(t => t.method === '체크카드');
+        const dairooItems = expenseItems.filter(t => t.method === '다이로움');
+        const cashTransferItems = expenseItems.filter(t => t.method === '현금/이체');
+
+        const debitSum = debitItems.reduce((acc, cur) => acc + Number(cur.amount), 0);
+        const dairooSum = dairooItems.reduce((acc, cur) => acc + Number(cur.amount), 0);
+        const cashTransferSum = cashTransferItems.reduce((acc, cur) => acc + Number(cur.amount), 0);
+        const totalCashExpense = debitSum + dairooSum + cashTransferSum;
+        const totalCount = debitItems.length + dairooItems.length + cashTransferItems.length;
+
+        document.getElementById('homeTotalCashExpense').textContent = formatKRW(totalCashExpense);
+        document.getElementById('homeCashExpenseCount').textContent = `총 ${totalCount}건`;
+
+        document.getElementById('homeDebitCardSum').textContent = formatKRW(debitSum);
+        document.getElementById('homeDebitCardCount').textContent = `${debitItems.length}건 >`;
+
+        document.getElementById('homeDairooSum').textContent = formatKRW(dairooSum);
+        document.getElementById('homeDairooCount').textContent = `${dairooItems.length}건 >`;
+
+        document.getElementById('homeCashTransferSum').textContent = formatKRW(cashTransferSum);
+        document.getElementById('homeCashTransferCount').textContent = `${cashTransferItems.length}건 >`;
+      } else {
+        activeContent.classList.add('hidden');
+        inactiveContent.classList.remove('hidden');
+        if (toggleText) {
+          toggleText.textContent = '꺼짐';
+          toggleText.className = 'text-[10px] text-slate-400 font-medium';
+        }
+        if (activeBadge) {
+          activeBadge.textContent = '비활성';
+          activeBadge.className = 'text-[9px] px-1.5 py-0.2 rounded-full bg-slate-700/60 text-slate-400 border border-slate-600/40 font-medium';
+        }
+
+        if (toggleBtn) toggleBtn.className = 'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-700 transition-colors duration-200 ease-in-out focus:outline-none';
+        if (toggleKnob) toggleKnob.className = 'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-0';
+
+        if (settingToggleBtn) settingToggleBtn.className = 'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-300 transition-colors duration-200 ease-in-out focus:outline-none';
+        if (settingToggleKnob) settingToggleKnob.className = 'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-0';
+      }
+    }
+
+    function toggleCashExpenseActive() {
+      state.isCashExpenseActive = !state.isCashExpenseActive;
+      saveData();
+      renderHome();
+      showToast(state.isCashExpenseActive ? '이번 달 현금 지출 카드가 활성화되었습니다.' : '이번 달 현금 지출 카드가 비활성화되었습니다.');
+    }
+
+    // 예상 카드값 카드 UI
+    function renderCardBillUI(items) {
+      const activeContent = document.getElementById('cardBillActiveContent');
+      const inactiveContent = document.getElementById('cardBillInactiveContent');
+      const toggleBtn = document.getElementById('cardBillToggleBtn');
+      const toggleKnob = document.getElementById('cardBillToggleKnob');
+      const toggleText = document.getElementById('cardBillToggleText');
+      const activeBadge = document.getElementById('cardBillActiveBadge');
+      
+      const settingToggleBtn = document.getElementById('settingCardBillToggleBtn');
+      const settingToggleKnob = document.getElementById('settingCardBillToggleKnob');
+
+      if (state.isCardBillActive) {
+        activeContent.classList.remove('hidden');
+        inactiveContent.classList.add('hidden');
+        toggleText.textContent = '활성';
+        toggleText.className = 'text-[10px] text-blue-300 font-bold';
+        activeBadge.textContent = '청구예상';
+        activeBadge.className = 'text-[9px] px-1.5 py-0.2 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 font-medium';
+
+        toggleBtn.className = 'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-blue-600 transition-colors duration-200 ease-in-out focus:outline-none';
+        toggleKnob.className = 'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-4';
+        
+        if (settingToggleBtn) settingToggleBtn.className = 'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-blue-600 transition-colors duration-200 ease-in-out focus:outline-none';
+        if (settingToggleKnob) settingToggleKnob.className = 'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-5';
+
+        const expenseItems = items.filter(t => t.type === 'expense');
+        const creditItems = expenseItems.filter(t => t.method === '신용카드');
+        const hybridItems = expenseItems.filter(t => t.method === '하이브리드카드');
+
+        const creditSum = creditItems.reduce((acc, cur) => acc + Number(cur.amount), 0);
+        const hybridSum = hybridItems.reduce((acc, cur) => acc + Number(cur.amount), 0);
+        const totalCardBill = creditSum + hybridSum;
+
+        document.getElementById('homeTotalExpectedCardBill').textContent = formatKRW(totalCardBill);
+        document.getElementById('homeCardBillCount').textContent = `총 ${creditItems.length + hybridItems.length}건`;
+        document.getElementById('homeCreditCardBill').textContent = formatKRW(creditSum);
+        document.getElementById('homeCreditCardCount').textContent = `${creditItems.length}건 >`;
+        document.getElementById('homeHybridCardBill').textContent = formatKRW(hybridSum);
+        document.getElementById('homeHybridCardCount').textContent = `${hybridItems.length}건 >`;
+      } else {
+        activeContent.classList.add('hidden');
+        inactiveContent.classList.remove('hidden');
+        toggleText.textContent = '꺼짐';
+        toggleText.className = 'text-[10px] text-slate-400 font-medium';
+        activeBadge.textContent = '비활성';
+        activeBadge.className = 'text-[9px] px-1.5 py-0.2 rounded-full bg-slate-700/60 text-slate-400 border border-slate-600/40 font-medium';
+
+        toggleBtn.className = 'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-700 transition-colors duration-200 ease-in-out focus:outline-none';
+        toggleKnob.className = 'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-0';
+        
+        if (settingToggleBtn) settingToggleBtn.className = 'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-300 transition-colors duration-200 ease-in-out focus:outline-none';
+        if (settingToggleKnob) settingToggleKnob.className = 'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-0';
+      }
+    }
+
+    function toggleCardBillActive() {
+      state.isCardBillActive = !state.isCardBillActive;
+      saveData();
+      renderHome();
+      showToast(state.isCardBillActive ? '예상 카드 대금 카드가 활성화되었습니다.' : '예상 카드 대금 카드가 비활성화되었습니다.');
+    }
+
+    function toggleCategoryChartActive() {
+      state.isCategoryChartActive = !state.isCategoryChartActive;
+      saveData();
+      renderHome();
+      showToast(state.isCategoryChartActive ? '카테고리별 지출 차트가 활성화되었습니다.' : '카테고리별 지출 차트가 비활성화되었습니다.');
+    }
+
+    function renderHomeCategoryChartUI(expenses) {
+      const activeContent = document.getElementById('homeCategoryChartActiveContent');
+      const inactiveContent = document.getElementById('homeCategoryChartInactiveContent');
+      const toggleBtn = document.getElementById('homeCategoryChartToggleBtn');
+      const toggleKnob = document.getElementById('homeCategoryChartToggleKnob');
+      const badge = document.getElementById('homeCategoryChartBadge');
+      
+      const settingToggleBtn = document.getElementById('settingCategoryChartToggleBtn');
+      const settingToggleKnob = document.getElementById('settingCategoryChartToggleKnob');
+
+      if (state.isCategoryChartActive) {
+        activeContent.classList.remove('hidden');
+        inactiveContent.classList.add('hidden');
+        if (badge) {
+          badge.textContent = '활성';
+          badge.className = 'text-[9px] px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-600 font-semibold border border-blue-100';
+        }
+
+        if (toggleBtn) toggleBtn.className = 'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-blue-600 transition-colors duration-200 ease-in-out focus:outline-none';
+        if (toggleKnob) toggleKnob.className = 'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-4';
+
+        if (settingToggleBtn) settingToggleBtn.className = 'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-blue-600 transition-colors duration-200 ease-in-out focus:outline-none';
+        if (settingToggleKnob) settingToggleKnob.className = 'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-5';
+
+        renderHomeCategoryChart(expenses);
+      } else {
+        activeContent.classList.add('hidden');
+        inactiveContent.classList.remove('hidden');
+        if (badge) {
+          badge.textContent = '꺼짐';
+          badge.className = 'text-[9px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-500 font-medium border border-slate-200';
+        }
+
+        if (toggleBtn) toggleBtn.className = 'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-300 transition-colors duration-200 ease-in-out focus:outline-none';
+        if (toggleKnob) toggleKnob.className = 'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-0';
+
+        if (settingToggleBtn) settingToggleBtn.className = 'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-300 transition-colors duration-200 ease-in-out focus:outline-none';
+        if (settingToggleKnob) settingToggleKnob.className = 'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-0';
+      }
+    }
+
+    function renderHomeCategoryChart(expenses) {
+      const ctx = document.getElementById('homeCategoryChart');
+      const notice = document.getElementById('homeChartEmptyNotice');
+      
+      const catTotals = {};
+      expenses.forEach(t => {
+        catTotals[t.category] = (catTotals[t.category] || 0) + Number(t.amount);
+      });
+
+      const labels = Object.keys(catTotals);
+      const data = Object.values(catTotals);
+
+      if (labels.length === 0) {
+        if (homeChart) {
+          homeChart.destroy();
+          homeChart = null;
+        }
+        ctx.style.display = 'none';
+        notice.classList.remove('hidden');
+        return;
+      }
+
+      ctx.style.display = 'block';
+      notice.classList.add('hidden');
+
+      const palette = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#f97316', '#64748b', '#14b8a6'];
+
+      if (homeChart) homeChart.destroy();
+      homeChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: palette.slice(0, labels.length),
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: { boxWidth: 8, font: { size: 10, family: 'Pretendard' }, padding: 8 }
+            },
+            tooltip: {
+              callbacks: {
+                label: (c) => ` ${c.label}: ${formatKRW(c.raw)}`
+              }
+            }
+          },
+          cutout: '68%'
+        }
+      });
+    }
+
+    // --- Render History with Multi-Criteria Filters & Aggregated Summary ---
+    function renderHistory() {
+      const container = document.getElementById('historyGroupedList');
+      const summaryCard = document.getElementById('historySummaryCard');
+      const countLabel = document.getElementById('summaryCountLabel');
+      const expLabel = document.getElementById('summaryExpenseLabel');
+      const incLabel = document.getElementById('summaryIncomeLabel');
+      const incDivider = document.getElementById('summaryIncomeDivider');
+      const conditionLabel = document.getElementById('summaryConditionLabel');
+      container.innerHTML = '';
+
+      let items = getMonthTransactions();
+
+      // 1. Type filter
+      if (state.activeFilter === 'expense') {
+        items = items.filter(t => t.type === 'expense');
+      } else if (state.activeFilter === 'income') {
+        items = items.filter(t => t.type === 'income');
+      }
+
+      // 2. Payment Method Filter (5 methods via dropdown)
+      if (state.historyPaymentFilter !== 'ALL') {
+        items = items.filter(t => t.method === state.historyPaymentFilter);
+      }
+
+      // 3. Category Filter
+      if (state.historyCategoryFilter !== 'ALL') {
+        items = items.filter(t => t.category === state.historyCategoryFilter);
+      }
+
+      // 4. Search text
+      const q = state.searchQuery.trim().toLowerCase();
+      if (q) {
+        if (state.memoOnlySearch) {
+          items = items.filter(t => t.memo && t.memo.toLowerCase().includes(q));
+        } else {
+          items = items.filter(t => 
+            (t.memo && t.memo.toLowerCase().includes(q)) ||
+            (t.category && t.category.toLowerCase().includes(q)) ||
+            (t.method && t.method.toLowerCase().includes(q))
+          );
+        }
+      }
+
+      // --- 합계 금액 실시간 계산 및 상단 배너 표시 ---
+      const hasFilterOrSearch = q !== '' || state.historyPaymentFilter !== 'ALL' || state.historyCategoryFilter !== 'ALL';
+      if (hasFilterOrSearch) {
+        summaryCard.classList.remove('hidden');
+        let filteredExpSum = 0;
+        let filteredIncSum = 0;
+        items.forEach(t => {
+          if (t.type === 'income') filteredIncSum += Number(t.amount);
+          else filteredExpSum += Number(t.amount);
+        });
+
+        countLabel.textContent = `${items.length}건`;
+        conditionLabel.textContent = state.historyPaymentFilter !== 'ALL' 
+          ? `[${state.historyPaymentFilter}] 결제 내역 합계` 
+          : (q ? (state.memoOnlySearch ? `"${q}" 메모 검색 합계` : `"${q}" 검색 결과 합계`) : '선택 조건별 합계');
+
+        expLabel.textContent = `지출 ${formatKRW(filteredExpSum, '-')}`;
+        if (filteredIncSum > 0) {
+          incLabel.textContent = `수입 ${formatKRW(filteredIncSum, '+')}`;
+          incLabel.classList.remove('hidden');
+          incDivider.classList.remove('hidden');
+        } else {
+          incLabel.classList.add('hidden');
+          incDivider.classList.add('hidden');
+        }
+      } else {
+        summaryCard.classList.add('hidden');
+      }
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="py-12 text-center text-xs text-slate-400">
+            조건에 일치하는 기록이 없습니다.
+          </div>
+        `;
+        return;
+      }
+
+      // Group by date
+      const groups = {};
+      items.forEach(t => {
+        if (!groups[t.date]) groups[t.date] = [];
+        groups[t.date].push(t);
+      });
+
+      const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+      sortedDates.forEach(dateStr => {
+        const dateItems = groups[dateStr];
+        let dayExpense = 0;
+        let dayIncome = 0;
+        dateItems.forEach(t => {
+          if (t.type === 'income') dayIncome += Number(t.amount);
+          else dayExpense += Number(t.amount);
+        });
+
+        const groupEl = document.createElement('div');
+        groupEl.className = 'space-y-1.5';
+
+        const d = new Date(dateStr + 'T00:00:00');
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
+        const dayLabel = `${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+
+        let summaryText = '';
+        if (dayExpense > 0 && dayIncome > 0) {
+          summaryText = `<span class="text-rose-500 font-semibold">${formatKRW(dayExpense, '-')}</span> · <span class="text-emerald-600 font-semibold">${formatKRW(dayIncome, '+')}</span>`;
+        } else if (dayExpense > 0) {
+          summaryText = `<span class="text-rose-500 font-semibold">${formatKRW(dayExpense, '-')}</span>`;
+        } else if (dayIncome > 0) {
+          summaryText = `<span class="text-emerald-600 font-semibold">${formatKRW(dayIncome, '+')}</span>`;
+        }
+
+        groupEl.innerHTML = `
+          <div class="flex items-center justify-between text-[11px] text-slate-500 px-1 font-medium">
+            <span>${dayLabel}</span>
+            <span>${summaryText}</span>
+          </div>
+          <div class="space-y-1.5" id="group-${dateStr}"></div>
+        `;
+
+        const listContainer = groupEl.querySelector(`#group-${dateStr}`);
+        dateItems.forEach(t => {
+          listContainer.appendChild(createTransactionCard(t, true));
+        });
+
+        container.appendChild(groupEl);
+      });
+    }
+
+    // Helper: Transaction Card with Edit & Delete options
+    function createTransactionCard(t, allowAction = true) {
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-xl p-3 border border-slate-100 shadow-sm flex items-center justify-between hover:border-slate-200 transition cursor-pointer select-none';
+
+      const isExpense = t.type === 'expense';
+      const allCats = isExpense ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+      const catObj = allCats.find(c => c.name === t.category) || { icon: '💳', color: 'bg-slate-50 text-slate-600' };
+
+      let payBadgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
+      if (t.method === '다이로움') {
+        payBadgeClass = 'bg-amber-50 text-amber-700 border border-amber-200 font-semibold';
+      } else if (t.method === '신용카드') {
+        payBadgeClass = 'bg-blue-50 text-blue-700 border border-blue-100';
+      } else if (t.method === '체크카드') {
+        payBadgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-100';
+      } else if (t.method === '현금/이체') {
+        payBadgeClass = 'bg-violet-50 text-violet-700 border border-violet-100';
+      } else if (t.method === '하이브리드카드') {
+        payBadgeClass = 'bg-cyan-50 text-cyan-700 border border-cyan-100';
+      }
+
+      const installmentBadge = (t.installmentTotalMonths && t.installmentTotalMonths > 1)
+        ? `<span class="text-[9px] px-1.5 py-0.2 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold ml-1">${t.installmentCurrentMonth}/${t.installmentTotalMonths}회차</span>`
+        : '';
+
+      const formattedAmount = formatKRW(t.amount, isExpense ? '-' : '+');
+
+      card.innerHTML = `
+        <div class="flex items-center space-x-3 flex-1 min-w-0 pointer-events-none">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center text-base ${catObj.color || 'bg-slate-100'} flex-shrink-0">
+            ${catObj.icon || '💳'}
+          </div>
+          <div class="flex-1 min-w-0 pr-2">
+            <div class="flex items-center space-x-1.5">
+              <span class="text-xs font-bold text-slate-800 truncate">${t.category}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-md ${payBadgeClass}">
+                ${t.method === '다이로움' ? '🪙 ' : ''}${t.method || '신용카드'}
+              </span>
+              ${installmentBadge}
+            </div>
+            <p class="text-[11px] text-slate-400 truncate mt-0.5">${t.memo || t.date}</p>
+          </div>
+        </div>
+        <div class="text-right flex items-center space-x-1.5">
+          <span class="text-xs font-bold ${isExpense ? 'text-slate-900' : 'text-emerald-600'} mr-1">
+            ${formattedAmount}
+          </span>
+          ${allowAction ? `
+            <button class="edit-item-btn text-slate-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-slate-100 transition" data-id="${t.id}" title="수정">
+              <svg class="w-3.5 h-3.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+            </button>
+            <button class="delete-item-btn text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 transition" data-id="${t.id}" title="삭제">
+              <svg class="w-3.5 h-3.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          ` : ''}
+        </div>
+      `;
+
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.delete-item-btn') || e.target.closest('.edit-item-btn')) return;
+        openEditModal(t.id);
+      });
+
+      if (allowAction) {
+        const editBtn = card.querySelector('.edit-item-btn');
+        if (editBtn) {
+          editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openEditModal(t.id);
+          });
+        }
+
+        const delBtn = card.querySelector('.delete-item-btn');
+        if (delBtn) {
+          delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isInstallment = t.installmentGroupId && t.installmentTotalMonths > 1;
+            const msg = isInstallment 
+              ? `[${t.category}] 할부 내역입니다. 이번 ${t.installmentCurrentMonth}회차 내역 1건만 삭제하시겠습니까?`
+              : `[${t.category}] ${(Number(t.amount) || 0).toLocaleString('ko-KR')}원 내역을 삭제하시겠습니까?`;
+
+            showConfirm('내역 삭제', msg, () => {
+              state.transactions = state.transactions.filter(item => item.id !== t.id);
+              saveData();
+              renderAll();
+              showToast('내역이 삭제되었습니다.');
+            });
+          });
+        }
+      }
+
+      return card;
+    }
+
+    // --- Render Stats ---
+    function renderStats() {
+      const expenses = getMonthTransactions().filter(t => t.type === 'expense');
+      const totalExpense = expenses.reduce((acc, cur) => acc + Number(cur.amount), 0);
+
+      renderPaymentStats(expenses, totalExpense);
+      renderCategoryStats(expenses, totalExpense);
+      renderDailyStats(expenses);
+    }
+
+    function renderPaymentStats(expenses, totalExpense) {
+      const pmCtx = document.getElementById('statsPaymentChart');
+      const emptyNotice = document.getElementById('statsPaymentEmptyNotice');
+      const cardsContainer = document.getElementById('statsPaymentMethodCards');
+      cardsContainer.innerHTML = '';
+
+      if (expenses.length === 0) {
+        if (statsPaymentChart) {
+          statsPaymentChart.destroy();
+          statsPaymentChart = null;
+        }
+        pmCtx.style.display = 'none';
+        emptyNotice.classList.remove('hidden');
+        cardsContainer.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">이번 달 지출 내역이 없습니다.</p>';
+        document.getElementById('paymentDrilldownContainer').classList.add('hidden');
+        return;
+      }
+
+      pmCtx.style.display = 'block';
+      emptyNotice.classList.add('hidden');
+
+      const methodStats = PAYMENT_METHODS.map(pm => {
+        const pmItems = expenses.filter(t => t.method === pm.key);
+        const sum = pmItems.reduce((acc, cur) => acc + Number(cur.amount), 0);
+        const count = pmItems.length;
+        const avg = count > 0 ? Math.round(sum / count) : 0;
+        const pct = totalExpense > 0 ? Math.round((sum / totalExpense) * 100) : 0;
+
+        const catMap = {};
+        pmItems.forEach(t => {
+          catMap[t.category] = (catMap[t.category] || 0) + Number(t.amount);
+        });
+        const topCats = Object.entries(catMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3);
+
+        return {
+          ...pm,
+          sum,
+          count,
+          avg,
+          pct,
+          topCats,
+          items: pmItems
+        };
+      });
+
+      if (statsPaymentChart) statsPaymentChart.destroy();
+      statsPaymentChart = new Chart(pmCtx, {
+        type: 'doughnut',
+        data: {
+          labels: methodStats.map(m => m.label),
+          datasets: [{
+            data: methodStats.map(m => m.sum),
+            backgroundColor: methodStats.map(m => m.color),
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                boxWidth: 10,
+                font: { size: 11, family: 'Pretendard', weight: 'bold' },
+                padding: 10
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (c) => ` ${c.label}: ${formatKRW(c.raw)} (${totalExpense > 0 ? Math.round((c.raw/totalExpense)*100) : 0}%)`
+              }
+            }
+          },
+          cutout: '66%'
+        }
+      });
+
+      methodStats.forEach(ms => {
+        const card = document.createElement('div');
+        const isDairoo = ms.key === '다이로움';
+        card.className = `p-3 rounded-xl border transition cursor-pointer hover:shadow-sm ${ms.border} ${ms.bgLight} ${state.statsSelectedMethod === ms.key ? 'ring-2 ring-offset-1 ring-blue-500' : ''}`;
+        
+        const topCatsHTML = ms.topCats.length > 0 
+          ? ms.topCats.map(([cat, amt]) => `<span class="bg-white/80 px-1.5 py-0.5 rounded text-[10px] text-slate-700 border border-slate-100">${cat} ${formatKRW(amt)}</span>`).join(' ')
+          : '<span class="text-[10px] text-slate-400">지출 없음</span>';
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="text-base">${ms.icon}</span>
+              <div>
+                <span class="text-xs font-bold ${ms.textLight}">${ms.label}</span>
+                ${isDairoo ? '<span class="ml-1 text-[9px] bg-amber-200 text-amber-900 font-bold px-1.5 py-0.2 rounded-full">지역화폐</span>' : ''}
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-sm font-extrabold text-slate-900">${formatKRW(ms.sum)}</span>
+              <span class="text-xs font-bold ${ms.textLight} ml-1">(${ms.pct}%)</span>
+            </div>
+          </div>
+
+          <div class="w-full bg-slate-200/70 rounded-full h-1.5 my-2 overflow-hidden">
+            <div class="h-1.5 rounded-full" style="width: ${ms.pct}%; background-color: ${ms.color}"></div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-600 pt-0.5">
+            <span>총 <b>${ms.count}</b>건 결제</span>
+            <span>건당 평균 <b>${formatKRW(ms.avg)}</b></span>
+          </div>
+
+          <div class="mt-2 pt-2 border-t border-black/5 flex items-center justify-between text-[10px]">
+            <span class="text-slate-500">주요 사용처:</span>
+            <div class="flex items-center space-x-1 overflow-hidden truncate">
+              ${topCatsHTML}
+            </div>
+          </div>
+        `;
+
+        card.addEventListener('click', () => {
+          selectPaymentMethodDrilldown(ms.key);
+        });
+
+        cardsContainer.appendChild(card);
+      });
+
+      if (state.statsSelectedMethod) {
+        selectPaymentMethodDrilldown(state.statsSelectedMethod);
+      }
+    }
+
+    function selectPaymentMethodDrilldown(methodKey) {
+      state.statsSelectedMethod = methodKey;
+      const container = document.getElementById('paymentDrilldownContainer');
+      const listEl = document.getElementById('paymentDrilldownList');
+      const labelEl = document.getElementById('paymentDrilldownLabel');
+
+      const expenses = getMonthTransactions().filter(t => t.type === 'expense' && t.method === methodKey);
+
+      labelEl.textContent = methodKey;
+      listEl.innerHTML = '';
+
+      if (expenses.length === 0) {
+        listEl.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">${methodKey} 결제 내역이 없습니다.</p>`;
+      } else {
+        const sorted = [...expenses].sort((a, b) => b.date.localeCompare(a.date));
+        sorted.forEach(t => {
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between text-xs py-1.5 px-2 bg-slate-50 hover:bg-slate-100 rounded-lg cursor-pointer transition';
+          row.innerHTML = `
+            <div class="flex items-center space-x-2 truncate pr-2">
+              <span class="text-[10px] text-slate-400 font-mono">${t.date.slice(5)}</span>
+              <span class="font-semibold text-slate-800">${t.category}</span>
+              <span class="text-[11px] text-slate-500 truncate">${t.memo || ''}</span>
+            </div>
+            <div class="flex items-center space-x-2 flex-shrink-0">
+              <span class="font-bold text-slate-900">${formatKRW(t.amount, '-')}</span>
+              <span class="text-[10px] text-blue-600 font-semibold">수정</span>
+            </div>
+          `;
+          row.addEventListener('click', () => openEditModal(t.id));
+          listEl.appendChild(row);
+        });
+      }
+
+      container.classList.remove('hidden');
+      pushNavigationState('drilldown_' + methodKey);
+      updateBackButtonState();
+      container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function renderCategoryStats(expenses, totalExpense) {
+      const catTotals = {};
+      expenses.forEach(t => {
+        catTotals[t.category] = (catTotals[t.category] || 0) + Number(t.amount);
+      });
+
+      const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+      const labels = sortedCats.map(x => x[0]);
+      const data = sortedCats.map(x => x[1]);
+
+      const catCtx = document.getElementById('statsCategoryChart');
+      const palette = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#f97316', '#64748b', '#14b8a6'];
+
+      if (statsCatChart) statsCatChart.destroy();
+      statsCatChart = new Chart(catCtx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: palette.slice(0, labels.length),
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
+            tooltip: {
+              callbacks: {
+                label: (c) => ` ${c.label}: ${formatKRW(c.raw)} (${totalExpense > 0 ? Math.round((c.raw/totalExpense)*100) : 0}%)`
+              }
+            }
+          },
+          cutout: '65%'
+        }
+      });
+
+      const catListContainer = document.getElementById('statsCategoryList');
+      catListContainer.innerHTML = '';
+      if (sortedCats.length === 0) {
+        catListContainer.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">지출 데이터가 없습니다.</p>';
+      } else {
+        sortedCats.forEach(([catName, amt], idx) => {
+          const pct = totalExpense > 0 ? Math.round((amt / totalExpense) * 100) : 0;
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between text-xs py-1';
+          row.innerHTML = `
+            <div class="flex items-center space-x-2 flex-1">
+              <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${palette[idx % palette.length]}"></span>
+              <span class="font-medium text-slate-700">${catName}</span>
+              <span class="text-[10px] text-slate-400">(${pct}%)</span>
+            </div>
+            <span class="font-bold text-slate-900">${formatKRW(amt)}</span>
+          `;
+          catListContainer.appendChild(row);
+        });
+      }
+    }
+
+    function renderDailyStats(expenses) {
+      const daysInMonth = new Date(state.currentYear, state.currentMonth, 0).getDate();
+      const dailyMap = {};
+      for (let i = 1; i <= daysInMonth; i++) dailyMap[i] = 0;
+
+      expenses.forEach(t => {
+        const d = parseInt(t.date.split('-')[2], 10);
+        if (dailyMap[d] !== undefined) {
+          dailyMap[d] += Number(t.amount);
+        }
+      });
+
+      const dayLabels = Object.keys(dailyMap).map(d => `${d}일`);
+      const dayValues = Object.values(dailyMap);
+
+      const dayCtx = document.getElementById('statsDailyChart');
+      if (statsDayChart) statsDayChart.destroy();
+      statsDayChart = new Chart(dayCtx, {
+        type: 'bar',
+        data: {
+          labels: dayLabels,
+          datasets: [{
+            label: '일별 지출',
+            data: dayValues,
+            backgroundColor: '#3b82f6',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (c) => ` ${formatKRW(c.raw)}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 9 }, maxTicksLimit: 10 }
+            },
+            y: {
+              ticks: {
+                font: { size: 9 },
+                callback: (v) => v >= 10000 ? `${v/10000}만` : v
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderAll() {
+      renderHome();
+      if (state.activeView === 'history') renderHistory();
+      if (state.activeView === 'stats') renderStats();
+    }
+
+    // --- Modal Handlers for Create & Edit ---
+    function openAddModal() {
+      state.modalMode = 'create';
+      state.editingId = null;
+      document.getElementById('modalTitle').textContent = '새로운 기록 추가';
+      document.getElementById('saveTransactionBtn').textContent = '기록 저장하기';
+      document.getElementById('inputAmount').value = '';
+      document.getElementById('inputMemo').value = '';
+      document.getElementById('inputDate').value = getTodayString();
+      document.getElementById('inputInstallmentMonths').value = '1';
+      document.getElementById('installmentPreviewNote').classList.add('hidden');
+      setType('expense');
+      setPaymentMethodSelection('신용카드');
+      document.getElementById('transactionModal').classList.remove('hidden');
+      pushNavigationState('modal_add');
+      updateBackButtonState();
+    }
+
+    function openEditModal(txId) {
+      const tx = state.transactions.find(t => t.id === txId);
+      if (!tx) return;
+
+      state.modalMode = 'edit';
+      state.editingId = txId;
+      document.getElementById('modalTitle').textContent = '기록 내용 수정';
+      document.getElementById('saveTransactionBtn').textContent = '수정사항 저장하기';
+      
+      document.getElementById('inputAmount').value = tx.amount;
+      document.getElementById('inputMemo').value = tx.memo || '';
+      document.getElementById('inputDate').value = tx.date;
+
+      setType(tx.type);
+      setCategorySelection(tx.category);
+      if (tx.type === 'expense') {
+        setPaymentMethodSelection(tx.method || '신용카드');
+      }
+
+      document.getElementById('inputInstallmentMonths').value = '1';
+      document.getElementById('installmentPreviewNote').classList.add('hidden');
+
+      document.getElementById('transactionModal').classList.remove('hidden');
+      pushNavigationState('modal_edit_' + txId);
+      updateBackButtonState();
+    }
+
+    function closeModal() {
+      document.getElementById('transactionModal').classList.add('hidden');
+      state.modalMode = 'create';
+      state.editingId = null;
+      updateBackButtonState();
+    }
+
+    function setType(type) {
+      state.selectedType = type;
+      const expBtn = document.getElementById('typeExpenseBtn');
+      const incBtn = document.getElementById('typeIncomeBtn');
+      const paySection = document.getElementById('paymentSection');
+
+      if (type === 'expense') {
+        expBtn.className = 'py-2 rounded-lg font-bold text-xs bg-white text-rose-600 shadow-sm transition';
+        incBtn.className = 'py-2 rounded-lg font-bold text-xs text-slate-500 hover:text-slate-800 transition';
+        paySection.classList.remove('hidden');
+        renderCategoryChips(EXPENSE_CATEGORIES);
+        state.selectedCategory = EXPENSE_CATEGORIES[0].name;
+      } else {
+        incBtn.className = 'py-2 rounded-lg font-bold text-xs bg-white text-emerald-600 shadow-sm transition';
+        expBtn.className = 'py-2 rounded-lg font-bold text-xs text-slate-500 hover:text-slate-800 transition';
+        paySection.classList.add('hidden');
+        renderCategoryChips(INCOME_CATEGORIES);
+        state.selectedCategory = INCOME_CATEGORIES[0].name;
+      }
+      updateInstallmentBoxVisibility();
+    }
+
+    function setCategorySelection(catName) {
+      state.selectedCategory = catName;
+      document.querySelectorAll('.cat-chip').forEach(c => {
+        if (c.dataset.name === catName) {
+          c.className = 'cat-chip py-2 px-1 rounded-xl text-xs flex flex-col items-center justify-center space-y-1 border transition border-blue-500 bg-blue-50/70 text-blue-700 font-bold';
+        } else {
+          c.className = 'cat-chip py-2 px-1 rounded-xl text-xs flex flex-col items-center justify-center space-y-1 border transition border-slate-200 bg-slate-50 text-slate-600';
+        }
+      });
+    }
+
+    function setPaymentMethodSelection(methodName) {
+      state.selectedPaymentMethod = methodName;
+      document.querySelectorAll('.pay-method-btn').forEach(b => {
+        if (b.dataset.method === methodName) {
+          b.className = 'pay-method-btn py-2 px-1 rounded-xl border border-blue-500 bg-blue-50 text-blue-700 font-semibold text-center flex flex-col items-center justify-center transition shadow-sm';
+        } else {
+          b.className = 'pay-method-btn py-2 px-1 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-center flex flex-col items-center justify-center transition';
+        }
+      });
+      updateInstallmentBoxVisibility();
+    }
+
+    function updateInstallmentBoxVisibility() {
+      const box = document.getElementById('creditCardInstallmentBox');
+      if (state.selectedType === 'expense' && state.selectedPaymentMethod === '신용카드' && state.modalMode === 'create') {
+        box.classList.remove('hidden');
+      } else {
+        box.classList.add('hidden');
+        document.getElementById('inputInstallmentMonths').value = '1';
+        document.getElementById('installmentPreviewNote').classList.add('hidden');
+      }
+    }
+
+    function updateInstallmentPreview() {
+      const amt = parseInt(document.getElementById('inputAmount').value, 10) || 0;
+      const months = parseInt(document.getElementById('inputInstallmentMonths').value, 10) || 1;
+      const note = document.getElementById('installmentPreviewNote');
+
+      if (months > 1 && amt > 0) {
+        const monthlyBase = Math.floor(amt / months);
+        const remainder = amt % months;
+        const firstMonthAmt = monthlyBase + remainder;
+        note.classList.remove('hidden');
+        note.textContent = `1회: ${formatKRW(firstMonthAmt)}원 / 이후 ${formatKRW(monthlyBase)}원`;
+      } else {
+        note.classList.add('hidden');
+      }
+    }
+
+    function renderCategoryChips(categories) {
+      const container = document.getElementById('categoryGrid');
+      container.innerHTML = '';
+      categories.forEach((cat, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `cat-chip py-2 px-1 rounded-xl text-xs flex flex-col items-center justify-center space-y-1 border transition ${idx === 0 ? 'border-blue-500 bg-blue-50/70 text-blue-700 font-bold' : 'border-slate-200 bg-slate-50 text-slate-600'}`;
+        btn.dataset.name = cat.name;
+        btn.dataset.id = cat.id;
+        btn.innerHTML = `
+          <span class="text-base">${cat.icon}</span>
+          <span class="text-[10px] leading-tight">${cat.name}</span>
+        `;
+        btn.addEventListener('click', () => {
+          setCategorySelection(cat.name);
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    function saveCurrentTransaction() {
+      const amountVal = parseInt(document.getElementById('inputAmount').value, 10);
+      if (!amountVal || amountVal <= 0) {
+        showToast('금액을 올바르게 입력해주세요.', '⚠️');
+        return;
+      }
+
+      const dateVal = document.getElementById('inputDate').value || getTodayString();
+      const userMemo = document.getElementById('inputMemo').value.trim();
+
+      if (state.modalMode === 'edit' && state.editingId) {
+        const targetIndex = state.transactions.findIndex(t => t.id === state.editingId);
+        if (targetIndex !== -1) {
+          state.transactions[targetIndex] = {
+            ...state.transactions[targetIndex],
+            type: state.selectedType,
+            amount: amountVal,
+            category: state.selectedCategory,
+            categoryId: state.selectedCategory,
+            date: dateVal,
+            method: state.selectedType === 'expense' ? state.selectedPaymentMethod : '현금/이체',
+            memo: userMemo
+          };
+          saveData();
+          closeModal();
+          renderAll();
+          showToast('기록이 수정되었습니다!');
+          return;
+        }
+      }
+
+      const installmentMonths = (state.selectedType === 'expense' && state.selectedPaymentMethod === '신용카드')
+        ? (parseInt(document.getElementById('inputInstallmentMonths').value, 10) || 1)
+        : 1;
+
+      if (installmentMonths > 1) {
+        const monthlyBase = Math.floor(amountVal / installmentMonths);
+        const remainder = amountVal % installmentMonths;
+        const groupId = 'inst_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+
+        for (let i = 1; i <= installmentMonths; i++) {
+          const isFirst = (i === 1);
+          const currentMonthAmount = isFirst ? (monthlyBase + remainder) : monthlyBase;
+          const billingDate = addMonthsToDate(dateVal, i - 1);
+          const memoPrefix = userMemo ? `${userMemo} ` : '';
+          const fullMemo = `${memoPrefix}(${installmentMonths}개월 할부 중 ${i}/${installmentMonths}회차)`;
+
+          const tx = {
+            id: 'tx_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 4),
+            type: 'expense',
+            amount: currentMonthAmount,
+            category: state.selectedCategory,
+            categoryId: state.selectedCategory,
+            date: billingDate,
+            method: '신용카드',
+            memo: fullMemo,
+            installmentTotalMonths: installmentMonths,
+            installmentCurrentMonth: i,
+            installmentGroupId: groupId
+          };
+          state.transactions.push(tx);
+        }
+        showToast(`${installmentMonths}개월 할부가 익월까지 자동 등록되었습니다!`);
+      } else {
+        const newTx = {
+          id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          type: state.selectedType,
+          amount: amountVal,
+          category: state.selectedCategory,
+          categoryId: state.selectedCategory,
+          date: dateVal,
+          method: state.selectedType === 'expense' ? state.selectedPaymentMethod : '현금/이체',
+          memo: userMemo
+        };
+        state.transactions.push(newTx);
+        showToast('새로운 기록이 저장되었습니다!');
+      }
+
+      saveData();
+
+      const ym = dateVal.slice(0, 7).split('-');
+      state.currentYear = parseInt(ym[0], 10);
+      state.currentMonth = parseInt(ym[1], 10);
+
+      closeModal();
+      renderAll();
+    }
+
+    function exportToCsv() {
+      if (state.transactions.length === 0) {
+        showToast('내보낼 데이터가 없습니다.', '⚠️');
+        return;
+      }
+
+      let csv = '\uFEFF날짜,구분,카테고리,금액,결제수단,메모\n';
+      const sorted = [...state.transactions].sort((a, b) => a.date.localeCompare(b.date));
+
+      sorted.forEach(t => {
+        const typeStr = t.type === 'income' ? '수입' : '지출';
+        const memoClean = (t.memo || '').replace(/"/g, '""');
+        csv += `"${t.date}","${typeStr}","${t.category}",${t.amount},"${t.method || ''}","${memoClean}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `가계부_내역_${getTodayString()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('엑셀(CSV) 파일이 다운로드되었습니다.');
+    }
+
+    function backupToJson() {
+      const backupData = {
+        app: 'mobile-budget',
+        version: 8,
+        exportedAt: new Date().toISOString(),
+        budget: state.budget,
+        transactions: state.transactions
+      };
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `가계부_백업_${getTodayString()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('백업 파일이 저장되었습니다.');
+    }
+
+    function restoreFromJson(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (Array.isArray(parsed.transactions)) {
+            state.transactions = parsed.transactions.map(t => ({
+              ...t,
+              method: mapToTargetMethod(t.method)
+            }));
+            if (parsed.budget) state.budget = Number(parsed.budget);
+            saveData();
+            renderAll();
+            showToast('백업 데이터가 성공적으로 복원되었습니다.');
+          } else {
+            showToast('올바르지 않은 백업 파일 형식입니다.', '⚠️');
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('JSON 파일을 읽는 중 오류가 발생했습니다.', '⚠️');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+
+    // --- Setup Event Listeners ---
+    function setupEventListeners() {
+      document.getElementById('headerBackBtn').addEventListener('click', () => {
+        handleNavigateBack();
+      });
+
+      window.addEventListener('popstate', () => {
+        handleNavigateBack();
+      });
+
+      document.getElementById('prevMonthBtn').addEventListener('click', () => {
+        state.currentMonth--;
+        if (state.currentMonth < 1) {
+          state.currentMonth = 12;
+          state.currentYear--;
+        }
+        renderAll();
+      });
+
+      document.getElementById('nextMonthBtn').addEventListener('click', () => {
+        state.currentMonth++;
+        if (state.currentMonth > 12) {
+          state.currentMonth = 1;
+          state.currentYear++;
+        }
+        renderAll();
+      });
+
+      // --- 홈 화면 5대 결제수단별 개별 아이템 클릭 이벤트 리스너 연결 ---
+      // 신용카드, 하이브리드카드, 체크카드, 다이로움, 현금/이체
+      document.querySelectorAll('.home-pay-card-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const methodName = item.dataset.homePayment;
+          if (methodName) {
+            filterToPaymentHistory(methodName);
+          }
+        });
+      });
+
+      // 예상 카드값 카드의 '내역 확인 ->' 버튼 클릭 시 신용카드 내역으로 이동
+      const cardBillNavBtn = document.getElementById('homeFilterCardBillBtn');
+      if (cardBillNavBtn) {
+        cardBillNavBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          filterToPaymentHistory('신용카드');
+        });
+      }
+
+      // 이번 달 현금 지출 카드의 '내역 확인 ->' 버튼 클릭 시 체크카드 내역으로 이동
+      const cashExpenseNavBtn = document.getElementById('homeFilterCashExpenseBtn');
+      if (cashExpenseNavBtn) {
+        cashExpenseNavBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          filterToPaymentHistory('체크카드');
+        });
+      }
+
+      // 예상 카드 대금 토글 스위치 이벤트 리스너들
+      const cardBillToggleBtn = document.getElementById('cardBillToggleBtn');
+      if (cardBillToggleBtn) cardBillToggleBtn.addEventListener('click', toggleCardBillActive);
+
+      const settingCardBillToggleBtn = document.getElementById('settingCardBillToggleBtn');
+      if (settingCardBillToggleBtn) settingCardBillToggleBtn.addEventListener('click', toggleCardBillActive);
+
+      // 이번 달 현금 지출 토글 스위치 이벤트 리스너들
+      const cashExpenseToggleBtn = document.getElementById('cashExpenseToggleBtn');
+      if (cashExpenseToggleBtn) cashExpenseToggleBtn.addEventListener('click', toggleCashExpenseActive);
+
+      const settingCashExpenseToggleBtn = document.getElementById('settingCashExpenseToggleBtn');
+      if (settingCashExpenseToggleBtn) settingCashExpenseToggleBtn.addEventListener('click', toggleCashExpenseActive);
+
+      // 카테고리별 지출 비율 차트 활성/비활성 토글 스위치 이벤트 리스너들
+      const chartToggleBtn = document.getElementById('homeCategoryChartToggleBtn');
+      if (chartToggleBtn) chartToggleBtn.addEventListener('click', toggleCategoryChartActive);
+
+      const settingCategoryChartToggleBtn = document.getElementById('settingCategoryChartToggleBtn');
+      if (settingCategoryChartToggleBtn) settingCategoryChartToggleBtn.addEventListener('click', toggleCategoryChartActive);
+
+      // 하단 내비게이션 바 및 화면 전환 버튼
+      document.getElementById('navHomeBtn').addEventListener('click', () => switchView('home'));
+      document.getElementById('navHistoryBtn').addEventListener('click', () => switchView('history'));
+      document.getElementById('navStatsBtn').addEventListener('click', () => switchView('stats'));
+      document.getElementById('navSettingsBtn').addEventListener('click', () => switchView('settings'));
+
+      const goToStatsBtn = document.getElementById('goToStatsBtn');
+      if (goToStatsBtn) goToStatsBtn.addEventListener('click', () => switchView('stats'));
+
+      const goToHistoryBtn = document.getElementById('goToHistoryBtn');
+      if (goToHistoryBtn) goToHistoryBtn.addEventListener('click', () => switchView('history'));
+
+      document.getElementById('closeDrilldownBtn').addEventListener('click', () => {
+        document.getElementById('paymentDrilldownContainer').classList.add('hidden');
+        state.statsSelectedMethod = null;
+        renderPaymentStats(getMonthTransactions().filter(t => t.type === 'expense'), 
+          getMonthTransactions().filter(t => t.type === 'expense').reduce((a,c) => a + Number(c.amount), 0));
+        updateBackButtonState();
+      });
+
+      document.getElementById('openAddModalBtn').addEventListener('click', openAddModal);
+      document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+      document.getElementById('saveTransactionBtn').addEventListener('click', saveCurrentTransaction);
+
+      document.getElementById('typeExpenseBtn').addEventListener('click', () => setType('expense'));
+      document.getElementById('typeIncomeBtn').addEventListener('click', () => setType('income'));
+
+      document.querySelectorAll('.quick-amt-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const cur = parseInt(document.getElementById('inputAmount').value, 10) || 0;
+          const add = parseInt(btn.dataset.amt, 10);
+          document.getElementById('inputAmount').value = cur + add;
+          updateInstallmentPreview();
+        });
+      });
+
+      document.getElementById('clearAmtBtn').addEventListener('click', () => {
+        document.getElementById('inputAmount').value = '';
+        updateInstallmentPreview();
+      });
+      document.getElementById('inputAmount').addEventListener('input', updateInstallmentPreview);
+      document.getElementById('inputInstallmentMonths').addEventListener('change', updateInstallmentPreview);
+
+      document.getElementById('dateTodayBtn').addEventListener('click', () => {
+        document.getElementById('inputDate').value = getTodayString();
+      });
+      document.getElementById('dateYesterdayBtn').addEventListener('click', () => {
+        document.getElementById('inputDate').value = getYesterdayString();
+      });
+
+      document.querySelectorAll('.pay-method-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          setPaymentMethodSelection(btn.dataset.method);
+        });
+      });
+
+      // 내역 결제수단 드롭다운 리스트 이벤트
+      const paySelect = document.getElementById('historyPaymentSelect');
+      if (paySelect) {
+        paySelect.addEventListener('change', (e) => {
+          state.historyPaymentFilter = e.target.value;
+          renderHistory();
+          updateBackButtonState();
+        });
+      }
+
+      // 내역 카테고리 드롭다운 리스트 이벤트
+      const catSelect = document.getElementById('historyCategorySelect');
+      if (catSelect) {
+        catSelect.addEventListener('change', (e) => {
+          state.historyCategoryFilter = e.target.value;
+          renderHistory();
+          updateBackButtonState();
+        });
+      }
+
+      const filterAll = document.getElementById('filterAllBtn');
+      const filterExp = document.getElementById('filterExpenseBtn');
+      const filterInc = document.getElementById('filterIncomeBtn');
+
+      function updateFilterUI(activeBtn) {
+        [filterAll, filterExp, filterInc].forEach(b => {
+          b.className = 'flex-1 py-1.5 rounded-lg hover:text-slate-900 transition text-slate-600';
+        });
+        activeBtn.className = 'flex-1 py-1.5 rounded-lg bg-white shadow-sm font-bold text-blue-600 transition';
+      }
+
+      filterAll.addEventListener('click', () => {
+        state.activeFilter = 'all';
+        updateFilterUI(filterAll);
+        populateHistoryCategorySelect();
+        renderHistory();
+      });
+      filterExp.addEventListener('click', () => {
+        state.activeFilter = 'expense';
+        updateFilterUI(filterExp);
+        populateHistoryCategorySelect();
+        renderHistory();
+      });
+      filterInc.addEventListener('click', () => {
+        state.activeFilter = 'income';
+        updateFilterUI(filterInc);
+        populateHistoryCategorySelect();
+        renderHistory();
+      });
+
+      const searchInput = document.getElementById('historySearchInput');
+      const clearBtn = document.getElementById('clearSearchBtn');
+
+      searchInput.addEventListener('input', (e) => {
+        state.searchQuery = e.target.value;
+        if (state.searchQuery) {
+          clearBtn.classList.remove('hidden');
+        } else {
+          clearBtn.classList.add('hidden');
+        }
+        renderHistory();
+      });
+
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        state.searchQuery = '';
+        clearBtn.classList.add('hidden');
+        renderHistory();
+      });
+
+      const memoOnlyCheck = document.getElementById('memoOnlySearchCheck');
+      if (memoOnlyCheck) {
+        memoOnlyCheck.addEventListener('change', (e) => {
+          state.memoOnlySearch = e.target.checked;
+          renderHistory();
+        });
+      }
+
+      const budgetModal = document.getElementById('budgetModal');
+      document.getElementById('openBudgetModalBtn').addEventListener('click', () => {
+        document.getElementById('modalBudgetInput').value = state.budget;
+        budgetModal.classList.remove('hidden');
+        pushNavigationState('modal_budget');
+        updateBackButtonState();
+      });
+      document.getElementById('closeBudgetModalBtn').addEventListener('click', () => {
+        budgetModal.classList.add('hidden');
+        updateBackButtonState();
+      });
+      document.getElementById('submitBudgetModalBtn').addEventListener('click', () => {
+        const val = parseInt(document.getElementById('modalBudgetInput').value, 10);
+        if (val && val >= 0) {
+          state.budget = val;
+          saveData();
+          renderAll();
+          budgetModal.classList.add('hidden');
+          updateBackButtonState();
+          showToast('목표 예산이 변경되었습니다.');
+        } else {
+          showToast('올바른 예산 금액을 입력하세요.', '⚠️');
+        }
+      });
+
+      document.getElementById('saveSettingBudgetBtn').addEventListener('click', () => {
+        const val = parseInt(document.getElementById('settingBudgetInput').value, 10);
+        if (val && val >= 0) {
+          state.budget = val;
+          saveData();
+          renderAll();
+          showToast('목표 예산이 저장되었습니다.');
+        }
+      });
+
+      document.getElementById('exportCsvBtn').addEventListener('click', exportToCsv);
+      document.getElementById('backupJsonBtn').addEventListener('click', backupToJson);
+      document.getElementById('restoreJsonInput').addEventListener('change', restoreFromJson);
+
+      document.getElementById('loadSampleDataBtn').addEventListener('click', () => {
+        showConfirm('샘플 데이터 불러오기', '할부 분할 및 5대 결제수단이 반영된 데모 데이터를 불러오시겠습니까?', () => {
+          loadSampleData(true);
+        });
+      });
+
+      document.getElementById('resetAllDataBtn').addEventListener('click', () => {
+        showConfirm('전체 데이터 초기화', '저장된 모든 가계부 내역이 영구 삭제됩니다. 진행하시겠습니까?', () => {
+          state.transactions = [];
+          state.budget = 1000000;
+          saveData();
+          renderAll();
+          showToast('모든 데이터가 초기화되었습니다.');
+        });
+      });
+
+      document.getElementById('confirmCancelBtn').addEventListener('click', () => {
+        document.getElementById('confirmModal').classList.add('hidden');
+        confirmCallback = null;
+        updateBackButtonState();
+      });
+      document.getElementById('confirmOkBtn').addEventListener('click', () => {
+        document.getElementById('confirmModal').classList.add('hidden');
+        if (typeof confirmCallback === 'function') {
+          confirmCallback();
+        }
+        confirmCallback = null;
+        updateBackButtonState();
+      });
+    }
+
+    // --- App Initialization ---
+    window.addEventListener('DOMContentLoaded', () => {
+      const now = new Date();
+      state.currentYear = now.getFullYear();
+      state.currentMonth = now.getMonth() + 1;
+
+      try {
+        window.history.replaceState({ type: 'view_home', timestamp: Date.now() }, '');
+      } catch (e) {}
+
+      loadData();
+      populateHistoryCategorySelect();
+      setupEventListeners();
+      renderAll();
+      updateBackButtonState();
+    });
+  </script>
+</body>
+</html>
